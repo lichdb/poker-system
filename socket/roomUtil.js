@@ -485,5 +485,49 @@ module.exports = {
             }
         }
         return { hasFourUsers, unHasFourUsers }
+    },
+    //根据users更新pokers、status、scores和passData
+    updateRecordsByUsers(users, records) {
+        //获取原数据
+        let pokers = records.pokers || {}
+        let scores = records.scores || {}
+        let status = records.status || {}
+        let passData = records.passData || {}
+        //定义新数据
+        let newPokers = {}
+        let newScores = {}
+        let newStatus = {}
+        let newPassData = {}
+        //遍历users
+        users.forEach(user => {
+            //原来有该用户的pokers数据
+            if (pokers.hasOwnProperty(user.user_id)) {
+                newPokers[user.user_id] = pokers[user.user_id]
+            }
+            //原来有该用户的scores数据
+            if (scores.hasOwnProperty(user.user_id)) {
+                newScores[user.user_id] = scores[user.user_id]
+            } else {
+                //没有则初始化
+                newScores[user.user_id] = 0
+            }
+            //原来有该用户的status数据
+            if (status.hasOwnProperty(user.user_id)) {
+                newStatus[user.user_id] = status[user.user_id]
+            } else {
+                newStatus[user.user_id] = 0
+            }
+            //原来有该用户的passData数据
+            if (passData.hasOwnProperty(user.user_id)) {
+                newPassData[user.user_id] = passData[user.user_id]
+            } else {
+                newPassData[user.user_id] = 0
+            }
+        })
+        records.pokers = newPokers
+        records.scores = newScores
+        records.status = newStatus
+        records.passData = newPassData
+        return records
     }
 }

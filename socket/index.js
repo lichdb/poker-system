@@ -22,6 +22,7 @@ const sendErrorMsg = (connection, message, needRefresh) => {
     )
     connection.send(JSON.stringify(msg))
 }
+
 module.exports = {
     //接收消息
     receiveMessage(result, connection, server) {
@@ -43,7 +44,21 @@ module.exports = {
             const roomConnections = server.connections.filter(item => {
                 return item.room == res.room
             })
-            const roomInfo = roomUtil.getRoom(res.room)
+            const users = roomConnections.map(item => {
+                return item.user
+            })
+            let roomInfo = roomUtil.getRoom(res.room)
+            //如果该房间在对局中，则需要初始化此用户的一些信息
+            if (roomInfo && roomInfo.room_status == 1) {
+                //获取records
+                let records = roomInfo.getRoomRecords()
+                //更新records
+                records = roomUtil.updateRecordsByUsers(users, records)
+                //重新设置records
+                roomInfo.setRoomRecords(records)
+                //更新room
+                roomUtil.updateRoom(res.room, roomInfo)
+            }
             roomConnections.forEach(conn => {
                 if (conn === connection) {
                     const msg = new Message(
@@ -51,14 +66,13 @@ module.exports = {
                         conn.room,
                         conn.user,
                         {
-                            users: roomConnections.map(item => {
-                                return item.user
-                            }),
+                            users: users,
                             pokers: roomInfo?.getRoomRecords()?.pokers,
                             status: roomInfo?.getRoomRecords()?.status,
                             currentGame:
                                 roomInfo?.getRoomRecords()?.currentGame,
-                            scores: roomInfo?.getRoomRecords()?.scores
+                            scores: roomInfo?.getRoomRecords()?.scores,
+                            isSelf: true
                         },
                         `你已加入房间`
                     )
@@ -77,14 +91,13 @@ module.exports = {
                             conn.room,
                             conn.user,
                             {
-                                users: roomConnections.map(item => {
-                                    return item.user
-                                }),
+                                users: users,
                                 pokers: roomInfo?.getRoomRecords()?.pokers,
                                 status: roomInfo?.getRoomRecords()?.status,
                                 currentGame:
                                     roomInfo?.getRoomRecords()?.currentGame,
-                                scores: roomInfo?.getRoomRecords()?.scores
+                                scores: roomInfo?.getRoomRecords()?.scores,
+                                isSelf: false
                             },
                             `${res.user.user_nickname}加入房间`
                         )
@@ -118,23 +131,14 @@ module.exports = {
                     //记录当前局数
                     records.currentGame = 1
                     //初始化每个用户的积分和状态、以及单局赢的次数
-                    let scores = {}
-                    let status = {}
-                    let passData = {}
-                    users.forEach(user => {
-                        scores[user.user_id] = 0
-                        status[user.user_id] = 0
-                        passData[user.user_id] = 0
-                    })
-                    records.scores = scores
-                    records.status = status
-                    records.passData = passData
+                    records = roomUtil.updateRecordsByUsers(users, records)
+                    //重新设置records
                     roomInfo.setRoomRecords(records)
                     //记录
                     roomUtil.updateRoom(res.room, roomInfo)
                     //发牌
                     roomUtil.licensing(res.room, users)
-                    //获取房间
+                    //重新获取
                     roomInfo = roomUtil.getRoom(res.room)
                     //推送
                     roomConnections.forEach(conn => {
@@ -166,6 +170,10 @@ module.exports = {
             const roomConnections = server.connections.filter(item => {
                 return item.room == res.room
             })
+            //获取用户数组
+            const users = roomConnections.map(item => {
+                return item.user
+            })
             //配牌不符合规矩
             if (!roomUtil.judgePokers(res.pokers[res.user.user_id])) {
                 const msg = new Message(
@@ -173,9 +181,7 @@ module.exports = {
                     res.room,
                     res.user,
                     {
-                        users: roomConnections.map(item => {
-                            return item.user
-                        }),
+                        users: users,
                         pokers: roomInfo?.getRoomRecords()?.pokers,
                         status: roomInfo?.getRoomRecords()?.status,
                         currentGame: roomInfo?.getRoomRecords()?.currentGame,
@@ -186,10 +192,6 @@ module.exports = {
                 connection.send(JSON.stringify(msg))
                 return
             }
-            //获取用户数组
-            const users = roomConnections.map(item => {
-                return item.user
-            })
             //获取records
             let records = roomInfo.getRoomRecords()
             //更新用户的状态
@@ -202,6 +204,14 @@ module.exports = {
             roomInfo.setRoomRecords(records)
             //记录
             roomUtil.updateRoom(res.room, roomInfo)
+            //判断是否全部配牌完成
+            let hasAllComplete = true
+            for (let key in res.pokers) {
+                if (status[key] == 0) {
+                    hasAllComplete = false
+                    break
+                }
+            }
             //推送配牌完成
             roomConnections.forEach(conn => {
                 const msg = new Message(
@@ -213,7 +223,9 @@ module.exports = {
                         pokers: roomInfo.getRoomRecords().pokers,
                         status: roomInfo.getRoomRecords().status,
                         currentGame: roomInfo.getRoomRecords().currentGame,
-                        scores: roomInfo.getRoomRecords().scores
+                        scores: roomInfo.getRoomRecords().scores,
+                        isSelf: conn === connection,
+                        hasAllComplete: hasAllComplete
                     },
                     `${res.user.user_nickname}已配牌完成`
                 )
@@ -250,6 +262,7 @@ module.exports = {
             const pokersArray = roomUtil.pokersSort(Object.values(obj))
             //临时分
             let tempScores = {}
+            let userTotal = Object.values(obj).length
             //计算得失分
             for (let key in obj) {
                 //判断每个用户的pokers数组中的位置
@@ -257,7 +270,7 @@ module.exports = {
                     return roomUtil.isSame(item, obj[key])
                 })
                 //2人
-                if (pokersArray.length == 2) {
+                if (userTotal == 2) {
                     //最大
                     if (index == 0) {
                         passData[key]++
@@ -269,7 +282,7 @@ module.exports = {
                     }
                 }
                 //3人
-                else if (pokersArray.length == 3) {
+                else if (userTotal == 3) {
                     //最大
                     if (index == 0) {
                         passData[key]++
@@ -285,7 +298,7 @@ module.exports = {
                     }
                 }
                 //4人
-                else if (pokersArray.length == 4) {
+                else if (userTotal == 4) {
                     //最大
                     if (index == 0) {
                         passData[key]++
@@ -348,21 +361,23 @@ module.exports = {
             })
             //获取records
             let records = roomInfo.getRoomRecords()
-
+            //获取pokers
             let pokers = records.pokers
+            //获取scores
             let scores = records.scores
+            //获取passData
             let passData = records.passData
-
-            const allUsers = Object.keys(pokers)
+            //遍历pokers执行吃喜加分减分逻辑
             for (let key in pokers) {
-                const letUsers = allUsers.filter(item => {
+                //其余用户的ID数组
+                const otherUsers = Object.keys(pokers).filter(item => {
                     return item != key
                 })
                 //有全红全黑进行加分
                 if (roomUtil.judgeRedAll(pokers[key])) {
                     scores[key] += HAPPY_SCORES.REDALL
                     //其余用户减分
-                    letUsers.forEach(item => {
+                    otherUsers.forEach(item => {
                         scores[item] -= HAPPY_SCORES.REDALL
                     })
                 }
@@ -371,7 +386,7 @@ module.exports = {
                 if (count > 0) {
                     scores[key] += HAPPY_SCORES.FOUR * count
                     //其余用户减分
-                    letUsers.forEach(item => {
+                    otherUsers.forEach(item => {
                         scores[item] -= HAPPY_SCORES.FOUR * count
                     })
                 }
@@ -379,24 +394,26 @@ module.exports = {
                 if (passData[key] == 3) {
                     scores[key] += HAPPY_SCORES.PASS
                     //其余用户减分
-                    letUsers.forEach(item => {
+                    otherUsers.forEach(item => {
                         scores[item] -= HAPPY_SCORES.PASS
                     })
                 }
             }
-
             //判断是否结束，结束已经交给前端判断了，这边直接return
             if (records.currentGame == roomInfo.room_mode) {
                 return
             }
             //记录当前局数
             records.currentGame = records.currentGame + 1
-            //初始化每个用户的状态
+            //初始化每个用户的status和passData
             let status = {}
+            passData = {}
             users.forEach(user => {
                 status[user.user_id] = 0
+                passData[user.user_id] = 0
             })
             records.status = status
+            records.passData = passData
             //设置roomRecords
             roomInfo.setRoomRecords(records)
             //记录
@@ -473,23 +490,20 @@ module.exports = {
         const roomConnections = server.connections.filter(item => {
             return item.room == connection.room
         })
-        //连接数为0，则解散此房间
-        if (roomConnections.length == 0) {
-            // RoomService.dissolution(connection.room).catch(error => {
-            //     console.log(error.message)
-            // })
-        } else {
+        //连接数不为0
+        if (roomConnections.length) {
+            const users = roomConnections.map(item => {
+                return item.user
+            })
+            const roomInfo = roomUtil.getRoom(connection.room)
             roomConnections.forEach(conn => {
                 if (conn != connection) {
-                    const roomInfo = roomUtil.getRoom(connection.room)
                     const msg = new Message(
                         2,
                         conn.room,
                         conn.user,
                         {
-                            users: roomConnections.map(item => {
-                                return item.user
-                            }),
+                            users: users,
                             pokers: roomInfo?.getRoomRecords()?.pokers,
                             status: roomInfo?.getRoomRecords()?.status,
                             currentGame:
