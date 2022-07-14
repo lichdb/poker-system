@@ -67,15 +67,12 @@ service.dissolution = async room_id => {
         throw new ServiceError('房间不存在')
     }
     const room = rooms[0]
-    if (room.room_status == 1) {
-        throw new ServiceError('正在进行中的房间对局无法删除')
-    }
     if (room.room_status == 2) {
-        throw new ServiceError('已结束的房间对局没有必要删除')
+        throw new ServiceError('已结束的房间无法解散')
     }
     const result = await sqlUtil.delete('room_id', room_id)
     if (result.affectedRows == 0) {
-        throw new ServiceError('删除失败')
+        throw new ServiceError('解散失败')
     }
 }
 
