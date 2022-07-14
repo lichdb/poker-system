@@ -267,7 +267,7 @@ module.exports = {
         else if (this.isSameFlower(pokersA)) {
             //A组牌为同花顺
             if (this.isShun(pokersA)) {
-                //处理A组牌是A123的情况
+                //处理A组牌是A23的情况
                 if (this.isA23(pokersA)) {
                     pokersA = this.A23Handler(pokersA)
                 }
