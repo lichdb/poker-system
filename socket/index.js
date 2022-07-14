@@ -359,8 +359,10 @@ module.exports = {
                     } else {
                         //查找是否同时多个在线
                         if (conn.user.user_id === connection.user.user_id) {
-                            throw new ServiceError(
-                                '你在另一个地方登录，当前主机被迫下线'
+                            sendErrorMsg(
+                                conn,
+                                '你在另一个地方登录，当前主机被迫下线',
+                                true
                             )
                         } else {
                             const msg = new Message(
