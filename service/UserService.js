@@ -147,4 +147,15 @@ service.getUserByToken = async req => {
     return user
 }
 
+//根据ID查询用户信息
+service.getUserById = async user_id => {
+    const users = await sqlUtil.query('user_id', user_id)
+    if (users.length == 0) {
+        return null
+    }
+    let user = users[0]
+    delete user.user_password
+    return user
+}
+
 module.exports = service
