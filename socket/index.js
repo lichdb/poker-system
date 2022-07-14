@@ -219,7 +219,7 @@ const goNextGame = (res, connection, server) => {
             //记录
             roomUtil.updateRoom(res.room, roomInfo)
             //发牌
-            roomUtil.licensing(res.room, users)
+            roomUtil.licensing(res.room, Object.keys(scores))
             //获取房间
             roomInfo = roomUtil.getRoom(res.room)
             //推送
@@ -317,9 +317,16 @@ module.exports = {
                     let scores = records.scores
                     let passData = records.passData
                     let status = records.status
-                    scores[res.user.user_id] = 0
-                    passData[res.user.user_id] = 0
-                    status[res.user.user_id] = 0
+                    //如果是中途退出再进来则不重置分数
+                    if (!scores[res.user.user_id]) {
+                        scores[res.user.user_id] = 0
+                    }
+                    if (!passData[res.user.user_id]) {
+                        passData[res.user.user_id] = 0
+                    }
+                    if (!status[res.user.user_id]) {
+                        status[res.user.user_id] = 0
+                    }
                     records.scores = scores
                     records.passData = passData
                     records.status = status
@@ -416,7 +423,7 @@ module.exports = {
                 //记录
                 roomUtil.updateRoom(res.room, roomInfo)
                 //发牌
-                roomUtil.licensing(res.room, users)
+                roomUtil.licensing(res.room, Object.keys(scores))
                 //重新获取
                 roomInfo = roomUtil.getRoom(res.room)
                 //用户信息集合
@@ -536,7 +543,7 @@ module.exports = {
                 })
             }
         } catch (error) {
-            console.log('error', error.name)
+            console.log(error.name, error.message)
             //如果是ServiceError则需要告知前端刷新页面
             if (error.name == 'ServiceError') {
                 sendErrorMsg(connection, error.message, true)
@@ -551,40 +558,50 @@ module.exports = {
     },
     //连接关闭
     async close(code, connection, server) {
-        //获取该房间的所有连接
-        const roomConnections = server.connections.filter(item => {
-            return item.room == connection.room
-        })
-        //连接数不为0
-        if (roomConnections.length) {
-            const users = roomConnections.map(item => {
-                return item.user
+        try {
+            //获取该房间的所有连接
+            const roomConnections = server.connections.filter(item => {
+                return item.room == connection.room
             })
-            const roomInfo = roomUtil.getRoom(connection.room)
-            let userInfos = []
-            if (roomInfo && roomInfo.room_status == 1) {
-                userInfos = await roomUtil.getUserInfoByScores(roomInfo)
-            }
-            roomConnections.forEach(conn => {
-                if (conn != connection) {
-                    const msg = new Message(
-                        2,
-                        conn.room,
-                        conn.user,
-                        {
-                            users: users,
-                            pokers: roomInfo?.getRoomRecords()?.pokers,
-                            status: roomInfo?.getRoomRecords()?.status,
-                            currentGame:
-                                roomInfo?.getRoomRecords()?.currentGame,
-                            scores: roomInfo?.getRoomRecords()?.scores,
-                            userInfos: userInfos
-                        },
-                        `${connection.user.user_nickname}离开了聊天室`
-                    )
-                    conn.send(JSON.stringify(msg))
+            //连接数不为0
+            if (roomConnections.length) {
+                const users = roomConnections.map(item => {
+                    return item.user
+                })
+                const roomInfo = roomUtil.getRoom(connection.room)
+                let userInfos = []
+                if (roomInfo && roomInfo.room_status == 1) {
+                    userInfos = await roomUtil.getUserInfoByScores(roomInfo)
                 }
-            })
+                roomConnections.forEach(conn => {
+                    if (conn != connection) {
+                        const msg = new Message(
+                            2,
+                            conn.room,
+                            conn.user,
+                            {
+                                users: users,
+                                pokers: roomInfo?.getRoomRecords()?.pokers,
+                                status: roomInfo?.getRoomRecords()?.status,
+                                currentGame:
+                                    roomInfo?.getRoomRecords()?.currentGame,
+                                scores: roomInfo?.getRoomRecords()?.scores,
+                                userInfos: userInfos
+                            },
+                            `${connection.user.user_nickname}离开了聊天室`
+                        )
+                        conn.send(JSON.stringify(msg))
+                    }
+                })
+            }
+        } catch (error) {
+            console.log(error.name, error.message)
+            //如果是ServiceError则需要告知前端刷新页面
+            if (error.name == 'ServiceError') {
+                sendErrorMsg(connection, error.message, true)
+            } else {
+                sendErrorMsg(connection, error.message, false)
+            }
         }
     }
 }

@@ -21,8 +21,8 @@ module.exports = {
         let pokers = JSON.parse(JSON.stringify(pokersConfig))
         const room = this.getRoom(room_id)
         let obj = {}
-        users.forEach(user => {
-            obj[user.user_id] = []
+        users.forEach(user_id => {
+            obj[user_id] = []
         })
         //给一个用户随机抽张牌
         const randomPoker = user_id => {
@@ -33,10 +33,13 @@ module.exports = {
             //删除这张牌，防止重复
             pokers.splice(index, 1)
         }
-        users.forEach(user => {
+        users.forEach(user_id => {
             for (let i = 0; i < 9; i++) {
-                randomPoker(user.user_id)
+                randomPoker(user_id)
             }
+            obj[user_id] = obj[user_id].sort((a, b) => {
+                return a.points - b.points
+            })
         })
         const records = room.getRoomRecords()
         records.pokers = obj
