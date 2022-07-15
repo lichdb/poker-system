@@ -52,6 +52,7 @@ const doComparePokers = (res, connection, server, group) => {
                 return item.belong[0] == group
             })
         }
+        console.log('比牌时获取对应组的用户pokers：', obj, group)
         //获取排序后的pokers数组
         const pokersArray = roomUtil.pokersSort(Object.values(obj))
         //临时分

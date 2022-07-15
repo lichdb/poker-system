@@ -13,6 +13,7 @@ const UnauthorizedError = require('./error/UnauthorizedError')
 //引入socket
 const ws = require('nodejs-websocket')
 const socket = require('./socket')
+const UserService = require('./service/UserService')
 
 //创建web服务器
 let app = express()
@@ -50,9 +51,15 @@ app.use((req, res, next) => {
         if (token) {
             //解析token
             jwt.parseToken(token)
-                .then(jwtResult => {
-                    //这里对jwtResult进行校验
-                    next()
+                .then(async jwtResult => {
+                    const user = await UserService.getUserById(
+                        jwtResult.user_id
+                    )
+                    if (user) {
+                        next()
+                    } else {
+                        next(new UnauthorizedError('此用户已不存在'))
+                    }
                 })
                 .catch(error => {
                     next(error)

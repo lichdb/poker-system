@@ -154,7 +154,9 @@ service.getUserById = async user_id => {
         return null
     }
     let user = users[0]
-    delete user.user_password
+    if (user) {
+        delete user.user_password
+    }
     return user
 }
 
