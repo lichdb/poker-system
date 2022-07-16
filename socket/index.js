@@ -1,4 +1,4 @@
-const Message = require('../entity/Message')
+﻿const Message = require('../entity/Message')
 const RoomService = require('../service/RoomService')
 const roomUtil = require('./roomUtil')
 const ServiceError = require('../error/ServiceError')
@@ -33,7 +33,6 @@ const doComparePokers = (res, connection, server, group) => {
         let records = roomInfo.getRoomRecords()
         //获取pokers
         let pokers = records.pokers
-        console.log('比牌获取到的pokers', pokers)
         //获取scores
         let scores = records.scores
         //获取passData
@@ -49,8 +48,8 @@ const doComparePokers = (res, connection, server, group) => {
         //获取对应组的用户pokers
         let obj = {}
         for (let key in pokers) {
+            console.log('用户ID：' + key, 'belong', pokers[key])
             obj[key] = pokers[key].filter(item => {
-                console.log('用户ID：' + key, 'item.belong', item.belong)
                 return item.belong[0] == group
             })
         }
@@ -400,6 +399,9 @@ module.exports = {
                 const roomConnections = server.connections.filter(item => {
                     return item.room == res.room
                 })
+                if (roomConnections.length <= 1) {
+                    throw new Error('开始游戏必须不少于两个人')
+                }
                 let roomInfo = await RoomService.query(res.room)
                 //转为Room对象
                 roomInfo = roomUtil.initRoomObject(roomInfo)
@@ -459,6 +461,10 @@ module.exports = {
             }
             //配牌完成
             else if (res.type == 4) {
+                console.log('用户配牌完成', res.pokers[res.user.user_id])
+                for (let key in res.pokers) {
+                    console.log('user', key, 'pokers', res.pokers[key])
+                }
                 let roomInfo = roomUtil.getRoom(res.room)
                 //获取该房间的所有连接
                 const roomConnections = server.connections.filter(item => {
@@ -468,6 +474,12 @@ module.exports = {
                 const users = roomConnections.map(item => {
                     return item.user
                 })
+                const isUnComplete = res.pokers[res.user.user_id].some(item => {
+                    return item.belong[0] == -1
+                })
+                if (isUnComplete) {
+                    throw new Error('配牌还没有完成')
+                }
                 //配牌不符合规矩
                 if (!roomUtil.judgePokers(res.pokers[res.user.user_id])) {
                     throw new Error('配牌不符合大小顺序')
@@ -479,7 +491,6 @@ module.exports = {
                 status[res.user.user_id] = 1
                 records.status = status
                 //更新pokers
-                console.log('用户配牌完成', res.pokers)
                 records.pokers = res.pokers
                 //设置roomRecords
                 roomInfo.setRoomRecords(records)
@@ -487,12 +498,14 @@ module.exports = {
                 roomUtil.updateRoom(res.room, roomInfo)
                 //判断是否全部配牌完成
                 let hasAllComplete = true
-                for (let key in res.pokers) {
+                for (let key in records.pokers) {
+                    console.log('key', key, 'status', status[key])
                     if (status[key] == 0) {
                         hasAllComplete = false
                         break
                     }
                 }
+                console.log('hasAllComplete', hasAllComplete)
                 //推送配牌完成
                 roomConnections.forEach(conn => {
                     const msg = new Message(
