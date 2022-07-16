@@ -566,6 +566,36 @@ module.exports = {
                     conn.send(JSON.stringify(msg))
                 })
             }
+            //接收快捷消息
+            else if (res.type == 9) {
+                let content = res.content
+                if (!content) {
+                    return
+                }
+                //获取该房间的所有连接
+                const roomConnections = server.connections.filter(item => {
+                    return item.room == res.room
+                })
+                //获取用户数组
+                const users = roomConnections.map(item => {
+                    return item.user
+                })
+                //推送快捷消息
+                roomConnections.forEach(conn => {
+                    const msg = new Message(
+                        9,
+                        conn.room,
+                        conn.user,
+                        {
+                            users: users,
+                            content: content,
+                            belongUser: res.user
+                        },
+                        `${res.user.user_nickname}发送了快捷消息`
+                    )
+                    conn.send(JSON.stringify(msg))
+                })
+            }
         } catch (error) {
             console.log(error.name, error.message)
             //如果是ServiceError则需要告知前端刷新页面
