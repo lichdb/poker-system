@@ -33,6 +33,7 @@ const doComparePokers = (res, connection, server, group) => {
         let records = roomInfo.getRoomRecords()
         //获取pokers
         let pokers = records.pokers
+        console.log('比牌获取到的pokers', pokers)
         //获取scores
         let scores = records.scores
         //获取passData
@@ -49,6 +50,7 @@ const doComparePokers = (res, connection, server, group) => {
         let obj = {}
         for (let key in pokers) {
             obj[key] = pokers[key].filter(item => {
+                console.log('用户ID：' + key, 'item.belong', item.belong)
                 return item.belong[0] == group
             })
         }
@@ -206,6 +208,11 @@ const goNextGame = (res, connection, server) => {
         }
         //判断是否结束
         if (records.currentGame == roomInfo.room_mode) {
+            //结束之前先更新分数，因为有吃喜的可能
+            records.scores = scores
+            roomInfo.setRoomRecords(records)
+            roomUtil.updateRoom(res.room, roomInfo)
+            //结束
             overGame(res, connection, server)
         } else {
             //记录当前局数
@@ -472,6 +479,7 @@ module.exports = {
                 status[res.user.user_id] = 1
                 records.status = status
                 //更新pokers
+                console.log('用户配牌完成', res.pokers)
                 records.pokers = res.pokers
                 //设置roomRecords
                 roomInfo.setRoomRecords(records)
