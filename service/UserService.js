@@ -32,10 +32,15 @@ service.login = async req => {
     if (user.user_password != md5(user_password)) {
         throw new ServiceError('密码错误，请重新输入')
     }
+    //更新登录时间
+    user.user_login = Date.now()
+    await sqlUtil.update(user, 'user_id')
+    //生成token
     const token = jwt.getToken({
         user_id: user.user_id,
         user_name: user_name
     })
+    //删除密码
     delete user.user_password
     return {
         user: user,

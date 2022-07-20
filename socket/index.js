@@ -594,6 +594,33 @@ module.exports = {
                     conn.send(JSON.stringify(msg))
                 })
             }
+            //接收丢球通知
+            else if (res.type == 10) {
+                const targetUser = res.targetUser
+                //获取该房间的所有连接
+                const roomConnections = server.connections.filter(item => {
+                    return item.room == res.room
+                })
+                //获取用户数组
+                const users = roomConnections.map(item => {
+                    return item.user
+                })
+                //推送丢球通知
+                roomConnections.forEach(conn => {
+                    const msg = new Message(
+                        10,
+                        conn.room,
+                        conn.user,
+                        {
+                            users: users,
+                            targetUser: targetUser,
+                            selfUser: res.user
+                        },
+                        `${res.user.user_nickname}向${targetUser.user_nickname}丢球`
+                    )
+                    conn.send(JSON.stringify(msg))
+                })
+            }
         } catch (error) {
             console.log(error.name, error.message)
             //如果是ServiceError则需要告知前端刷新页面
