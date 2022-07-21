@@ -202,21 +202,23 @@ module.exports = {
     A23Handler(pokers) {
         let poker = pokers.filter(item => {
             return item.value == 'A'
-        })
+        })[0]
         let index = pokers.findIndex(item => {
             return item.value == 'A'
         })
-        if (poker.type == 3) {
-            poker.points = 1
-        } else if (poker.type == 2) {
-            poker.points = 2
-        } else if (poker.type == 1) {
-            poker.points = 3
-        } else if (poker.type == 0) {
-            poker.points = 4
+        if (poker && index > -1) {
+            if (poker.type == 3) {
+                poker.points = 1
+            } else if (poker.type == 2) {
+                poker.points = 2
+            } else if (poker.type == 1) {
+                poker.points = 3
+            } else if (poker.type == 0) {
+                poker.points = 4
+            }
+            pokers.splice(index, 1, poker)
         }
-        let newPokers = pokers.splice(index, 1, poker)
-        return newPokers
+        return pokers
     },
     //获取对子牌中对子最大的值的牌
     getPairPoker(pokers) {
@@ -272,6 +274,7 @@ module.exports = {
                 //处理A组牌是A23的情况
                 if (this.isA23(pokersA)) {
                     pokersA = this.A23Handler(pokersA)
+                    console.log('A23处理后的牌A', pokersA)
                 }
                 //B组牌为豹子
                 if (this.isBao(pokersB)) {
@@ -282,6 +285,7 @@ module.exports = {
                     //处理B组牌是A123的情况
                     if (this.isA23(pokersB)) {
                         pokersB = this.A23Handler(pokersB)
+                        console.log('A23处理后的牌B', pokersB)
                     }
                     //比较最大的点数
                     return resA.maxPoker.points > resB.maxPoker.points
@@ -323,6 +327,7 @@ module.exports = {
             //处理A组牌为A23的情况
             if (this.isA23(pokersA)) {
                 pokersA = this.A23Handler(pokersA)
+                console.log('A23处理后的牌A', pokersA)
             }
             //B组牌为豹子
             if (this.isBao(pokersB)) {
@@ -337,6 +342,7 @@ module.exports = {
                 //处理B组牌为A23的情况
                 if (this.isA23(pokersB)) {
                     pokersB = this.A23Handler(pokersB)
+                    console.log('A23处理后的牌B', pokersB)
                 }
                 return resA.maxPoker.points > resB.maxPoker.points
             }
