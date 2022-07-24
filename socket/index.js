@@ -460,7 +460,6 @@ module.exports = {
             }
             //配牌完成
             else if (res.type == 4) {
-                console.log('用户配牌完成', res.pokers[res.user.user_id])
                 for (let key in res.pokers) {
                     console.log('user', key, 'pokers', res.pokers[key])
                 }
@@ -496,13 +495,7 @@ module.exports = {
                 //记录
                 roomUtil.updateRoom(res.room, roomInfo)
                 //判断是否全部配牌完成
-                let hasAllComplete = true
-                for (let key in records.pokers) {
-                    if (status[key] == 0) {
-                        hasAllComplete = false
-                        break
-                    }
-                }
+                let hasAllComplete = roomUtil.getUserIsComplete(res.pokers)
                 console.log('hasAllComplete', hasAllComplete)
                 //推送配牌完成
                 roomConnections.forEach(conn => {
