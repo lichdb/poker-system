@@ -132,7 +132,6 @@ const doComparePokers = (res, connection, server, group) => {
                 {
                     users: users,
                     pokers: roomInfo.getRoomRecords().pokers,
-                    status: roomInfo.getRoomRecords().status,
                     currentGame: roomInfo.getRoomRecords().currentGame,
                     scores: roomInfo.getRoomRecords().scores,
                     tempScores: tempScores,
@@ -215,9 +214,8 @@ const goNextGame = (res, connection, server) => {
         } else {
             //记录当前局数
             records.currentGame = records.currentGame + 1
-            //初始化每个用户的status和passData
+            //初始化每个用户的passData
             for (let key in scores) {
-                records.status[key] = 0
                 records.passData[key] = 0
             }
             //设置roomRecords
@@ -237,7 +235,6 @@ const goNextGame = (res, connection, server) => {
                     {
                         users: users,
                         pokers: roomInfo.getRoomRecords().pokers,
-                        status: roomInfo.getRoomRecords().status,
                         currentGame: roomInfo.getRoomRecords().currentGame,
                         scores: roomInfo.getRoomRecords().scores
                     },
@@ -322,7 +319,6 @@ module.exports = {
                     let records = roomInfo.getRoomRecords()
                     let scores = records.scores
                     let passData = records.passData
-                    let status = records.status
                     //如果是中途退出再进来则不重置分数
                     if (!scores[res.user.user_id]) {
                         scores[res.user.user_id] = 0
@@ -330,12 +326,8 @@ module.exports = {
                     if (!passData[res.user.user_id]) {
                         passData[res.user.user_id] = 0
                     }
-                    if (!status[res.user.user_id]) {
-                        status[res.user.user_id] = 0
-                    }
                     records.scores = scores
                     records.passData = passData
-                    records.status = status
                     //重新设置records
                     roomInfo.setRoomRecords(records)
                     //更新room
@@ -352,7 +344,6 @@ module.exports = {
                             {
                                 users: users,
                                 pokers: roomInfo?.getRoomRecords()?.pokers,
-                                status: roomInfo?.getRoomRecords()?.status,
                                 currentGame:
                                     roomInfo?.getRoomRecords()?.currentGame,
                                 scores: roomInfo?.getRoomRecords()?.scores,
@@ -378,7 +369,6 @@ module.exports = {
                                 {
                                     users: users,
                                     pokers: roomInfo?.getRoomRecords()?.pokers,
-                                    status: roomInfo?.getRoomRecords()?.status,
                                     currentGame:
                                         roomInfo?.getRoomRecords()?.currentGame,
                                     scores: roomInfo?.getRoomRecords()?.scores,
@@ -417,17 +407,14 @@ module.exports = {
                 let records = roomInfo.getRoomRecords()
                 //记录当前局数
                 records.currentGame = 1
-                //初始化每个用户的积分和状态、以及单局赢的次数
+                //初始化每个用户的积分和单局赢的次数
                 let scores = {}
-                let status = {}
                 let passData = {}
                 users.forEach(item => {
                     scores[item.user_id] = 0
-                    status[item.user_id] = 0
                     passData[item.user_id] = 0
                 })
                 records.scores = scores
-                records.status = status
                 records.passData = passData
                 //重新设置records
                 roomInfo.setRoomRecords(records)
@@ -448,7 +435,6 @@ module.exports = {
                         {
                             users: users,
                             pokers: roomInfo.getRoomRecords().pokers,
-                            status: roomInfo.getRoomRecords().status,
                             currentGame: roomInfo.getRoomRecords().currentGame,
                             scores: roomInfo.getRoomRecords().scores,
                             userInfos: userInfos
@@ -484,10 +470,6 @@ module.exports = {
                 }
                 //获取records
                 let records = roomInfo.getRoomRecords()
-                //更新用户的状态
-                let status = records.status
-                status[res.user.user_id] = 1
-                records.status = status
                 //更新pokers
                 records.pokers = res.pokers
                 //设置roomRecords
@@ -506,7 +488,6 @@ module.exports = {
                         {
                             users: users,
                             pokers: roomInfo.getRoomRecords().pokers,
-                            status: roomInfo.getRoomRecords().status,
                             currentGame: roomInfo.getRoomRecords().currentGame,
                             scores: roomInfo.getRoomRecords().scores,
                             isSelf: conn === connection,
@@ -656,7 +637,6 @@ module.exports = {
                                 {
                                     users: users,
                                     pokers: roomInfo?.getRoomRecords()?.pokers,
-                                    status: roomInfo?.getRoomRecords()?.status,
                                     currentGame:
                                         roomInfo?.getRoomRecords()?.currentGame,
                                     scores: roomInfo?.getRoomRecords()?.scores,

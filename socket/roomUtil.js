@@ -514,8 +514,8 @@ module.exports = {
     //判断指定用户是否配牌完成
     getUserIsComplete(pokers) {
         let hasAllComplete = true
-        for (let poker of pokers) {
-            const isUnComplete = poker.some(item => {
+        for (let key in pokers) {
+            const isUnComplete = pokers[key].some(item => {
                 return item.belong[0] == -1
             })
             if (isUnComplete) {
