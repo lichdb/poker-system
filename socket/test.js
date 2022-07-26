@@ -1,5 +1,8 @@
 const roomUtil = require('./roomUtil')
-
+const util = require('../util/util')
+const SqlUtil = require('mysql-op')
+const pool = require('../pool.js')
+const sqlUtil = new SqlUtil(pool, 'room')
 const arr = {
     1: [
         { type: 1, value: '2', belong: [1, 0], points: 7 },
@@ -24,5 +27,3 @@ const arr = {
         { type: 2, value: 'A', belong: [0, 0], points: 54 }
     ]
 }
-
-console.log(roomUtil.getUserIsComplete(arr))

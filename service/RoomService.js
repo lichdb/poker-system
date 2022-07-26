@@ -13,6 +13,41 @@ const sqlUtil = new SqlUtil(pool, 'room')
 const UserService = require('./UserService')
 //创建业务类
 const service = {}
+//设置定时任务删除之前未完成的房间
+setInterval(async () => {
+    try {
+        //今日时间
+        let today = new Date()
+        let year = today.getFullYear()
+        let month = today.getMonth()
+        let date = today.getDate()
+        today = new Date(year, month, date, 0, 0, 0, 0).getTime()
+        let params = {
+            room_status: 0,
+            room_begin: [null, today]
+        }
+        const counts = await sqlUtil.queryCounts(params)
+        if (counts > 0) {
+            const rooms = await sqlUtil.querys(
+                {
+                    room_status: 0,
+                    room_begin: [null, today]
+                },
+                'and',
+                'room_begin',
+                'asc',
+                0,
+                counts,
+                []
+            )
+            for (let room of rooms) {
+                await sqlUtil.delete('room_id', room.room_id)
+            }
+        }
+    } catch (error) {
+        console.log('定时删除任务', error)
+    }
+}, 7 * 24 * 60 * 60 * 1000)
 
 //创建房间
 service.create = async req => {
