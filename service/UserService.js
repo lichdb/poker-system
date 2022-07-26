@@ -17,6 +17,31 @@ const sqlUtil = new SqlUtil(pool, 'user')
 //创建业务类
 const service = {}
 
+//静默登录
+service.defaultLogin = async req => {
+    let token = req.headers['authorization']
+    let user = await jwt.parseToken(token)
+    const users = await sqlUtil.query('user_id', user.user_id)
+    if (users.length == 0) {
+        throw new ServiceError('此用户已不存在')
+    }
+    user = users[0]
+    //更新登录时间
+    user.user_login = Date.now()
+    await sqlUtil.update(user, 'user_id')
+    //生成新的token
+    const newToken = jwt.getToken({
+        user_id: user.user_id,
+        user_name: user.user_name
+    })
+    //删除密码
+    delete user.user_password
+    return {
+        user: user,
+        token: newToken
+    }
+}
+
 //登录
 service.login = async req => {
     const user_name = req.body.user_name
