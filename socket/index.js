@@ -48,7 +48,7 @@ const doComparePokers = (res, connection, server, group) => {
         //获取对应组的用户pokers
         let obj = {}
         for (let key in pokers) {
-            console.log('用户ID：' + key, 'belong', pokers[key])
+            console.log('比牌，用户ID：' + key, 'belong', pokers[key])
             obj[key] = pokers[key].filter(item => {
                 return item.belong[0] == group
             })
@@ -447,7 +447,11 @@ module.exports = {
             //配牌完成
             else if (res.type == 4) {
                 for (let key in res.pokers) {
-                    console.log('user', key, 'pokers', res.pokers[key])
+                    console.log(
+                        'user：' + key,
+                        '配牌完成，pokers',
+                        res.pokers[key]
+                    )
                 }
                 let roomInfo = roomUtil.getRoom(res.room)
                 //获取该房间的所有连接
@@ -613,7 +617,6 @@ module.exports = {
     async close(code, connection, server) {
         try {
             const roomInfo = roomUtil.getRoom(connection.room)
-            console.log('用户离开时的房间缓存信息', roomInfo)
             if (roomInfo) {
                 //获取该房间的所有连接
                 const roomConnections = server.connections.filter(item => {
