@@ -637,6 +637,10 @@ module.exports = {
                 let roomInfo = roomUtil.getRoom(res.room)
                 //获取records
                 let records = roomInfo.getRoomRecords()
+                //两个人的对局无法弃牌
+                if (Object.keys(records.pokers).length == 2) {
+                    throw new Error('两个人对局无法弃牌')
+                }
                 //如果已经有玩家弃牌了
                 if (records.discardsUser) {
                     throw new Error('已经有人弃牌了，你无法弃牌')
