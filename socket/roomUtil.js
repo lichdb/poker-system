@@ -415,6 +415,14 @@ module.exports = {
     //多组牌排序
     pokersSort(pokers) {
         return pokers.sort((pokersA, pokersB) => {
+            //牌为空表示弃牌了
+            if (pokersA.length == 0) {
+                return 1
+            }
+            //牌为空表示弃牌了
+            if (pokersB.length == 0) {
+                return -1
+            }
             return this.compareTwoPokers(pokersA, pokersB) ? -1 : 1
         })
     },
@@ -511,16 +519,19 @@ module.exports = {
         }
         return userInfos
     },
-    //判断指定用户是否配牌完成
-    getUserIsComplete(pokers) {
+    //判断全部用户是否配牌完成
+    getUserIsComplete(pokers, discardsUser) {
         let hasAllComplete = true
         for (let key in pokers) {
-            const isUnComplete = pokers[key].some(item => {
-                return item.belong[0] == -1
-            })
-            if (isUnComplete) {
-                hasAllComplete = false
-                break
+            //用户未弃牌
+            if (discardsUser != key) {
+                const isUnComplete = pokers[key].some(item => {
+                    return item.belong[0] == -1
+                })
+                if (isUnComplete) {
+                    hasAllComplete = false
+                    break
+                }
             }
         }
         return hasAllComplete

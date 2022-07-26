@@ -48,10 +48,14 @@ const doComparePokers = (res, connection, server, group) => {
         //获取对应组的用户pokers
         let obj = {}
         for (let key in pokers) {
-            console.log('比牌，用户ID：' + key, 'belong', pokers[key])
-            obj[key] = pokers[key].filter(item => {
-                return item.belong[0] == group
-            })
+            if (records.discardsUser == key) {
+                obj[key] = []
+            } else {
+                console.log('比牌，用户ID：' + key, 'belong', pokers[key])
+                obj[key] = pokers[key].filter(item => {
+                    return item.belong[0] == group
+                })
+            }
         }
         //获取排序后的pokers数组
         const pokersArray = roomUtil.pokersSort(Object.values(obj))
@@ -64,6 +68,7 @@ const doComparePokers = (res, connection, server, group) => {
             const index = pokersArray.findIndex(item => {
                 return roomUtil.isSame(item, obj[key])
             })
+            console.log('key,index', key, index)
             //2人
             if (userTotal == 2) {
                 //最大
@@ -173,34 +178,37 @@ const goNextGame = (res, connection, server) => {
         let passData = records.passData
         //遍历pokers执行吃喜加分减分逻辑
         for (let key in pokers) {
-            //其余用户的ID数组
-            const otherUsers = Object.keys(pokers).filter(item => {
-                return item != key
-            })
-            //有全红全黑进行加分
-            if (roomUtil.judgeRedAll(pokers[key])) {
-                scores[key] += HAPPY_SCORES.REDALL * otherUsers.length
-                //其余用户减分
-                otherUsers.forEach(item => {
-                    scores[item] -= HAPPY_SCORES.REDALL
+            //该用户没有弃牌才进行判断
+            if (records.discardsUser != key) {
+                //没有弃牌的其余用户的ID数组
+                const otherUsers = Object.keys(pokers).filter(item => {
+                    return item != key && item != records.discardsUser
                 })
-            }
-            //有4个头加分
-            const count = roomUtil.judegeFour(pokers[key])
-            if (count > 0) {
-                scores[key] += HAPPY_SCORES.FOUR * count * otherUsers.length
-                //其余用户减分
-                otherUsers.forEach(item => {
-                    scores[item] -= HAPPY_SCORES.FOUR * count
-                })
-            }
-            //通关加分
-            if (passData[key] == 3) {
-                scores[key] += HAPPY_SCORES.PASS * otherUsers.length
-                //其余用户减分
-                otherUsers.forEach(item => {
-                    scores[item] -= HAPPY_SCORES.PASS
-                })
+                //有全红全黑进行加分
+                if (roomUtil.judgeRedAll(pokers[key])) {
+                    scores[key] += HAPPY_SCORES.REDALL * otherUsers.length
+                    //其余用户减分
+                    otherUsers.forEach(item => {
+                        scores[item] -= HAPPY_SCORES.REDALL
+                    })
+                }
+                //有4个头加分
+                const count = roomUtil.judegeFour(pokers[key])
+                if (count > 0) {
+                    scores[key] += HAPPY_SCORES.FOUR * count * otherUsers.length
+                    //其余用户减分
+                    otherUsers.forEach(item => {
+                        scores[item] -= HAPPY_SCORES.FOUR * count
+                    })
+                }
+                //通关加分
+                if (passData[key] == 3) {
+                    scores[key] += HAPPY_SCORES.PASS * otherUsers.length
+                    //其余用户减分
+                    otherUsers.forEach(item => {
+                        scores[item] -= HAPPY_SCORES.PASS
+                    })
+                }
             }
         }
         //判断是否结束
@@ -218,6 +226,8 @@ const goNextGame = (res, connection, server) => {
             for (let key in scores) {
                 records.passData[key] = 0
             }
+            //重新设置discardsUser
+            records.discardsUser = null
             //设置roomRecords
             roomInfo.setRoomRecords(records)
             //记录
@@ -236,7 +246,8 @@ const goNextGame = (res, connection, server) => {
                         users: users,
                         pokers: roomInfo.getRoomRecords().pokers,
                         currentGame: roomInfo.getRoomRecords().currentGame,
-                        scores: roomInfo.getRoomRecords().scores
+                        scores: roomInfo.getRoomRecords().scores,
+                        discardsUser: roomInfo.getRoomRecords().discardsUser
                     },
                     `第${roomInfo.getRoomRecords().currentGame}局开始`
                 )
@@ -319,6 +330,7 @@ module.exports = {
                     let records = roomInfo.getRoomRecords()
                     let scores = records.scores
                     let passData = records.passData
+                    let discardsUser = records.discardsUser
                     //如果是中途退出再进来则不重置分数
                     if (!scores[res.user.user_id]) {
                         scores[res.user.user_id] = 0
@@ -326,8 +338,12 @@ module.exports = {
                     if (!passData[res.user.user_id]) {
                         passData[res.user.user_id] = 0
                     }
+                    if (!discardsUser) {
+                        discardsUser = null
+                    }
                     records.scores = scores
                     records.passData = passData
+                    records.discardsUser = discardsUser
                     //重新设置records
                     roomInfo.setRoomRecords(records)
                     //更新room
@@ -347,6 +363,8 @@ module.exports = {
                                 currentGame:
                                     roomInfo?.getRoomRecords()?.currentGame,
                                 scores: roomInfo?.getRoomRecords()?.scores,
+                                discardsUser:
+                                    roomInfo?.getRoomRecords()?.discardsUser,
                                 isSelf: true,
                                 userInfos: userInfos
                             },
@@ -372,6 +390,9 @@ module.exports = {
                                     currentGame:
                                         roomInfo?.getRoomRecords()?.currentGame,
                                     scores: roomInfo?.getRoomRecords()?.scores,
+                                    discardsUser:
+                                        roomInfo?.getRoomRecords()
+                                            ?.discardsUser,
                                     isSelf: false,
                                     userInfos: userInfos
                                 },
@@ -407,6 +428,8 @@ module.exports = {
                 let records = roomInfo.getRoomRecords()
                 //记录当前局数
                 records.currentGame = 1
+                //初始化弃牌用户
+                records.discardsUser = null
                 //初始化每个用户的积分和单局赢的次数
                 let scores = {}
                 let passData = {}
@@ -437,6 +460,8 @@ module.exports = {
                             pokers: roomInfo.getRoomRecords().pokers,
                             currentGame: roomInfo.getRoomRecords().currentGame,
                             scores: roomInfo.getRoomRecords().scores,
+                            discardsUser:
+                                roomInfo.getRoomRecords().discardsUser,
                             userInfos: userInfos
                         },
                         '游戏开始，推送数据'
@@ -474,6 +499,10 @@ module.exports = {
                 }
                 //获取records
                 let records = roomInfo.getRoomRecords()
+                //判断是否弃牌
+                if (records.discardsUser == res.user.user_id) {
+                    throw new Error('你已经弃牌，无法配牌')
+                }
                 //更新pokers
                 records.pokers = res.pokers
                 //设置roomRecords
@@ -481,7 +510,10 @@ module.exports = {
                 //记录
                 roomUtil.updateRoom(res.room, roomInfo)
                 //判断是否全部配牌完成
-                let hasAllComplete = roomUtil.getUserIsComplete(res.pokers)
+                let hasAllComplete = roomUtil.getUserIsComplete(
+                    res.pokers,
+                    records.discardsUser
+                )
                 console.log('hasAllComplete', hasAllComplete)
                 //推送配牌完成
                 roomConnections.forEach(conn => {
@@ -598,6 +630,62 @@ module.exports = {
                     )
                     conn.send(JSON.stringify(msg))
                 })
+            }
+            //弃牌通知
+            else if (res.type == 11) {
+                //获取房间信息
+                let roomInfo = roomUtil.getRoom(res.room)
+                //获取records
+                let records = roomInfo.getRoomRecords()
+                //如果已经有玩家弃牌了
+                if (records.discardsUser) {
+                    throw new Error('已经有人弃牌了，你无法弃牌')
+                }
+                records.discardsUser = res.user.user_id
+                //重新设置records
+                roomInfo.setRoomRecords(records)
+                //记录
+                roomUtil.updateRoom(res.room, roomInfo)
+                //获取该房间的所有连接
+                const roomConnections = server.connections.filter(item => {
+                    return item.room == res.room
+                })
+                //获取用户数组
+                const users = roomConnections.map(item => {
+                    return item.user
+                })
+                //判断是否全部配牌完成
+                let hasAllComplete = roomUtil.getUserIsComplete(
+                    records.pokers,
+                    records.discardsUser
+                )
+                console.log('hasAllComplete', hasAllComplete)
+                //推送
+                roomConnections.forEach(conn => {
+                    const msg = new Message(
+                        11,
+                        conn.room,
+                        conn.user,
+                        {
+                            users: users,
+                            discardsUser:
+                                roomInfo.getRoomRecords().discardsUser,
+                            pokers: roomInfo.getRoomRecords().pokers,
+                            isSelf: conn === connection,
+                            hasAllComplete: hasAllComplete
+                        },
+                        `${res.user.user_nickname}已经弃牌了`
+                    )
+                    conn.send(JSON.stringify(msg))
+                })
+
+                //全部配牌完成，自动比牌
+                if (hasAllComplete) {
+                    //这里设置1s延迟是因为前端多了个弃牌提示
+                    setTimeout(() => {
+                        doComparePokers(res, connection, server, 0)
+                    }, 1000)
+                }
             }
         } catch (error) {
             console.log(error.name, error.message)
