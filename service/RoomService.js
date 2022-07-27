@@ -97,6 +97,7 @@ service.queryHistory = async req => {
             'room.room_begin',
             'room.room_end',
             'room.room_status',
+            'room.room_players',
             'user.user_nickname'
         ],
         tables
