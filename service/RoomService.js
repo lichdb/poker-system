@@ -67,7 +67,7 @@ service.queryHistory = async req => {
     const user = await UserService.getUserByToken(req)
     let params = {
         'room.room_players': {
-            value: '/' + user.user_id,
+            value: '/' + user.user_id + '/',
             fuzzy: true
         },
         'room.room_status': 2

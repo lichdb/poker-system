@@ -265,7 +265,7 @@ const overGame = async (res, connection, server) => {
     //更新房间状态为已完成
     roomInfo.room_status = 2
     //更新房间玩家数据
-    roomInfo.room_players = '/' + Object.keys(scores).join('/')
+    roomInfo.room_players = '/' + Object.keys(scores).join('/') + '/'
     //更新房间到数据库
     await RoomService.update(roomInfo)
     //获取该房间的所有连接
@@ -333,7 +333,6 @@ module.exports = {
                     let records = roomInfo.getRoomRecords()
                     let scores = records.scores
                     let passData = records.passData
-                    let discardsUser = records.discardsUser
                     //如果是中途退出再进来则不重置分数
                     if (!scores[res.user.user_id]) {
                         scores[res.user.user_id] = 0
@@ -341,12 +340,8 @@ module.exports = {
                     if (!passData[res.user.user_id]) {
                         passData[res.user.user_id] = 0
                     }
-                    if (!discardsUser) {
-                        discardsUser = null
-                    }
                     records.scores = scores
                     records.passData = passData
-                    records.discardsUser = discardsUser
                     //重新设置records
                     roomInfo.setRoomRecords(records)
                     //更新room
@@ -695,7 +690,7 @@ module.exports = {
                 }
             }
         } catch (error) {
-            console.log(error.name, error.message)
+            console.log(error)
             //如果是ServiceError则需要告知前端刷新页面
             if (error.name == 'ServiceError') {
                 sendErrorMsg(connection, error.message, true)
@@ -724,6 +719,22 @@ module.exports = {
                     })
                     let userInfos = []
                     if (roomInfo.room_status == 1) {
+                        //获取records
+                        let records = roomInfo.getRoomRecords()
+                        //如果还没有给这个用户发牌，则删除他的初始化信息
+                        if (!records.pokers[connection.user.user_id]) {
+                            let scores = records.scores
+                            let passData = records.passData
+                            delete scores[connection.user.user_id]
+                            delete passData[connection.user.user_id]
+                            records.scores = scores
+                            records.passData = passData
+                            //重新设置records
+                            roomInfo.setRoomRecords(records)
+                            //更新room
+                            roomUtil.updateRoom(connection.room, roomInfo)
+                        }
+                        //获取用户信息集合
                         userInfos = await roomUtil.getUserInfoByScores(roomInfo)
                     }
                     roomConnections.forEach(conn => {
