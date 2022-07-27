@@ -259,10 +259,13 @@ const goNextGame = (res, connection, server) => {
 //结束
 const overGame = async (res, connection, server) => {
     let roomInfo = roomUtil.getRoom(res.room)
+    let scores = roomInfo.getRoomRecords().scores
     //记录结束时间
     roomInfo.room_end = Date.now()
     //更新房间状态为已完成
     roomInfo.room_status = 2
+    //更新房间玩家数据
+    roomInfo.room_players = '/' + Object.keys(scores).join('/')
     //更新房间到数据库
     await RoomService.update(roomInfo)
     //获取该房间的所有连接

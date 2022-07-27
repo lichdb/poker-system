@@ -17,6 +17,25 @@ const sqlUtil = new SqlUtil(pool, 'user')
 //创建业务类
 const service = {}
 
+//根据ID查询用户基本信息
+service.queryUserInfo = async req => {
+    const user_id = req.body.user_id
+    if (!user_id) {
+        throw new ServiceError('未获取到用户ID')
+    }
+    const users = await sqlUtil.query('user_id', user_id, [
+        'user_id',
+        'user_name',
+        'user_register',
+        'user_login',
+        'user_nickname'
+    ])
+    if (users.length == 0) {
+        throw new ServiceError('用户不存在')
+    }
+    return users[0]
+}
+
 //静默登录
 service.defaultLogin = async req => {
     let token = req.headers['authorization']

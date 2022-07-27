@@ -49,6 +49,61 @@ setInterval(async () => {
     }
 }, 7 * 24 * 60 * 60 * 1000)
 
+//查询对局
+service.queryRoom = async req => {
+    const room_id = req.body.room_id
+    if (!room_id) {
+        throw new ServiceError('未获取到房间号')
+    }
+    const rooms = await sqlUtil.query('room_id', room_id)
+    if (rooms.length == 0) {
+        throw new ServiceError('查无此房间信息')
+    }
+    return rooms[0]
+}
+
+//查询用户近20局记录
+service.queryHistory = async req => {
+    const user = await UserService.getUserByToken(req)
+    let params = {
+        'room.room_players': {
+            value: '/' + user.user_id,
+            fuzzy: true
+        },
+        'room.room_status': 2
+    }
+    const counts = await sqlUtil.queryCounts(params, 'and')
+    if (counts == 0) {
+        throw new ServiceError('暂无对局')
+    }
+    let size = counts > 20 ? 20 : counts
+    let tables = [
+        {
+            table: 'user',
+            columns: ['user.user_id', 'room.room_creator']
+        }
+    ]
+    const rooms = await sqlUtil.querys(
+        params,
+        'and',
+        'room.room_end',
+        'desc',
+        0,
+        size,
+        [
+            'room.room_id',
+            'room.room_creator',
+            'room.room_mode',
+            'room.room_begin',
+            'room.room_end',
+            'room.room_status',
+            'user.user_nickname'
+        ],
+        tables
+    )
+    return rooms
+}
+
 //创建房间
 service.create = async req => {
     let room_mode = req.body.room_mode
@@ -68,7 +123,8 @@ service.create = async req => {
         room_mode,
         Date.now(),
         null,
-        0
+        0,
+        null
     )
     const result = await sqlUtil.insert(room)
     if (result.affectedRows == 0) {
@@ -111,7 +167,7 @@ service.dissolution = async room_id => {
     }
 }
 
-//查询房间信息
+//查询对局中的房间信息
 service.query = async room_id => {
     const rooms = await sqlUtil.query('room_id', room_id)
     if (rooms.length == 0) {

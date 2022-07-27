@@ -6,7 +6,10 @@ const routes = [
     '/api/room/create',
     '/api/user/modify',
     '/api/room/check',
-    '/api/user/defaultLogin'
+    '/api/user/defaultLogin',
+    '/api/room/queryHistory',
+    '/api/room/queryRoom',
+    '/api/user/queryUserInfo'
 ]
 
 module.exports = url => {

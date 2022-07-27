@@ -53,4 +53,15 @@ router.post('/modify', (req, res, next) => {
         })
 })
 
+//查询用户基本信息
+router.post('/queryUserInfo', (req, res, next) => {
+    UserService.queryUserInfo(req)
+        .then(result => {
+            return res.json(JsonResult.success(result))
+        })
+        .catch(error => {
+            next(error)
+        })
+})
+
 module.exports = router

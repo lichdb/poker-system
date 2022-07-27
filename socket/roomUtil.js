@@ -57,7 +57,8 @@ module.exports = {
             roomInfo.room_mode,
             roomInfo.room_begin,
             roomInfo.room_end,
-            roomInfo.room_status
+            roomInfo.room_status,
+            roomInfo.room_players
         )
     },
     //判断是否豹子

@@ -9,7 +9,8 @@ class Room {
         room_mode,
         room_begin,
         room_end,
-        room_status
+        room_status,
+        room_players
     ) {
         //对局ID
         this.room_id = room_id
@@ -25,6 +26,8 @@ class Room {
         this.room_end = room_end
         //对局状态，0表示未开始，1表示已开始，2表示已结束
         this.room_status = room_status
+        //参加玩家
+        this.room_players = room_players
     }
 
     getRoomRecords() {
