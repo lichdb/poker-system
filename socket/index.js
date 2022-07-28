@@ -706,17 +706,17 @@ module.exports = {
     //连接关闭
     async close(code, connection, server) {
         try {
+            //获取该房间的所有连接
+            const roomConnections = server.connections.filter(item => {
+                return item.room == connection.room
+            })
+            const users = roomConnections.map(item => {
+                return item.user
+            })
             const roomInfo = roomUtil.getRoom(connection.room)
             if (roomInfo) {
-                //获取该房间的所有连接
-                const roomConnections = server.connections.filter(item => {
-                    return item.room == connection.room
-                })
                 //连接数不为0
                 if (roomConnections.length) {
-                    const users = roomConnections.map(item => {
-                        return item.user
-                    })
                     let userInfos = []
                     if (roomInfo.room_status == 1) {
                         //获取records
@@ -757,6 +757,21 @@ module.exports = {
                         }
                     })
                 }
+            } else {
+                roomConnections.forEach(conn => {
+                    if (conn != connection) {
+                        const msg = new Message(
+                            2,
+                            conn.room,
+                            conn.user,
+                            {
+                                users: users
+                            },
+                            `${connection.user.user_nickname}离开了聊天室`
+                        )
+                        conn.send(JSON.stringify(msg))
+                    }
+                })
             }
         } catch (error) {
             console.log(error.name, error.message)
