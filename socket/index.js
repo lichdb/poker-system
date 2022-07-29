@@ -114,7 +114,7 @@ const doComparePokers = (res, connection, server, group) => {
                 }
                 //最小
                 else {
-                    tempScores[key] -= -SCORE_CHELON[2]
+                    tempScores[key] = -SCORE_CHELON[2]
                 }
             }
             scores[key] += tempScores[key]
