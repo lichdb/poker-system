@@ -323,6 +323,9 @@ module.exports = {
                 const users = roomConnections.map(item => {
                     return item.user
                 })
+                if (roomConnections.length > 4) {
+                    throw new ServiceError('房间内已经有4个人了')
+                }
                 let roomInfo = roomUtil.getRoom(res.room)
                 //用户信息集合
                 let userInfos = []
