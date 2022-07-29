@@ -23,7 +23,6 @@ const sendErrorMsg = (connection, message, needRefresh) => {
     )
     connection.send(JSON.stringify(msg))
 }
-
 //比牌
 const doComparePokers = (res, connection, server, group) => {
     //比牌间隔时间3s
