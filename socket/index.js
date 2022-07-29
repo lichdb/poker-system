@@ -716,13 +716,13 @@ module.exports = {
             if (roomInfo) {
                 let userInfos = []
                 if (roomInfo.room_status == 1) {
+                    //获取records
+                    let records = roomInfo.getRoomRecords()
                     console.log(
                         '房间对局中，用户离开房间',
                         connection.user.user_id,
                         records.pokers[connection.user.user_id]
                     )
-                    //获取records
-                    let records = roomInfo.getRoomRecords()
                     //如果还没有给这个用户发牌，则删除他的初始化信息
                     if (!records.pokers[connection.user.user_id]) {
                         let scores = records.scores
@@ -775,7 +775,7 @@ module.exports = {
                 })
             }
         } catch (error) {
-            console.log(error.name, error.message)
+            console.log(error)
             //如果是ServiceError则需要告知前端刷新页面
             if (error.name == 'ServiceError') {
                 sendErrorMsg(connection, error.message, true)
