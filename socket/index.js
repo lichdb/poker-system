@@ -715,48 +715,50 @@ module.exports = {
             })
             const roomInfo = roomUtil.getRoom(connection.room)
             if (roomInfo) {
-                //连接数不为0
-                if (roomConnections.length) {
-                    let userInfos = []
-                    if (roomInfo.room_status == 1) {
-                        //获取records
-                        let records = roomInfo.getRoomRecords()
-                        //如果还没有给这个用户发牌，则删除他的初始化信息
-                        if (!records.pokers[connection.user.user_id]) {
-                            let scores = records.scores
-                            let passData = records.passData
-                            delete scores[connection.user.user_id]
-                            delete passData[connection.user.user_id]
-                            records.scores = scores
-                            records.passData = passData
-                            //重新设置records
-                            roomInfo.setRoomRecords(records)
-                            //更新room
-                            roomUtil.updateRoom(connection.room, roomInfo)
-                        }
-                        //获取用户信息集合
-                        userInfos = await roomUtil.getUserInfoByScores(roomInfo)
+                let userInfos = []
+                if (roomInfo.room_status == 1) {
+                    console.log(
+                        '房间对局中，用户离开房间',
+                        connection.user.user_id,
+                        records.pokers[connection.user.user_id]
+                    )
+                    //获取records
+                    let records = roomInfo.getRoomRecords()
+                    //如果还没有给这个用户发牌，则删除他的初始化信息
+                    if (!records.pokers[connection.user.user_id]) {
+                        let scores = records.scores
+                        let passData = records.passData
+                        delete scores[connection.user.user_id]
+                        delete passData[connection.user.user_id]
+                        records.scores = scores
+                        records.passData = passData
+                        //重新设置records
+                        roomInfo.setRoomRecords(records)
+                        //更新room
+                        roomUtil.updateRoom(connection.room, roomInfo)
                     }
-                    roomConnections.forEach(conn => {
-                        if (conn != connection) {
-                            const msg = new Message(
-                                2,
-                                conn.room,
-                                conn.user,
-                                {
-                                    users: users,
-                                    pokers: roomInfo?.getRoomRecords()?.pokers,
-                                    currentGame:
-                                        roomInfo?.getRoomRecords()?.currentGame,
-                                    scores: roomInfo?.getRoomRecords()?.scores,
-                                    userInfos: userInfos
-                                },
-                                `${connection.user.user_nickname}离开了聊天室`
-                            )
-                            conn.send(JSON.stringify(msg))
-                        }
-                    })
+                    //获取用户信息集合
+                    userInfos = await roomUtil.getUserInfoByScores(roomInfo)
                 }
+                roomConnections.forEach(conn => {
+                    if (conn != connection) {
+                        const msg = new Message(
+                            2,
+                            conn.room,
+                            conn.user,
+                            {
+                                users: users,
+                                pokers: roomInfo?.getRoomRecords()?.pokers,
+                                currentGame:
+                                    roomInfo?.getRoomRecords()?.currentGame,
+                                scores: roomInfo?.getRoomRecords()?.scores,
+                                userInfos: userInfos
+                            },
+                            `${connection.user.user_nickname}离开了聊天室`
+                        )
+                        conn.send(JSON.stringify(msg))
+                    }
+                })
             } else {
                 roomConnections.forEach(conn => {
                     if (conn != connection) {
