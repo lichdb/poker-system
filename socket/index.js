@@ -145,6 +145,7 @@ const doComparePokers = (res, connection, server, group) => {
             )
             conn.send(JSON.stringify(msg))
         })
+        console.log('当前比试第' + group + '组')
         //判断是否需要比试下一组
         if (group < 2) {
             doComparePokers(res, connection, server, group + 1)
@@ -169,6 +170,7 @@ const goNextGame = (res, connection, server) => {
         })
         //获取records
         let records = roomInfo.getRoomRecords()
+        console.log('当前比试完成时是第' + records.currentGame + '局')
         //获取pokers
         let pokers = records.pokers
         //获取scores
@@ -221,6 +223,7 @@ const goNextGame = (res, connection, server) => {
         } else {
             //记录当前局数
             records.currentGame = records.currentGame + 1
+            console.log('即将进入第' + records.currentGame + '局')
             //初始化每个用户的passData
             for (let key in scores) {
                 records.passData[key] = 0
@@ -503,8 +506,10 @@ module.exports = {
                 if (records.discardsUser == res.user.user_id) {
                     throw new Error('你已经弃牌，无法配牌')
                 }
-                //更新pokers
-                records.pokers = res.pokers
+                //更新该用户的pokers
+                let pokers = records.pokers
+                pokers[res.user.user_id] = res.pokers[res.user.user_id]
+                records.pokers = pokers
                 //设置roomRecords
                 roomInfo.setRoomRecords(records)
                 //记录
