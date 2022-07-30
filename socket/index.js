@@ -212,6 +212,12 @@ const goNextGame = (res, connection, server) => {
                 }
             }
         }
+        console.log(
+            '游戏是否结束',
+            records.currentGame,
+            roomInfo.room_mode,
+            records.currentGame == roomInfo.room_mode
+        )
         //判断是否结束
         if (records.currentGame == roomInfo.room_mode) {
             //结束之前先更新分数，因为有吃喜的可能
@@ -262,6 +268,7 @@ const goNextGame = (res, connection, server) => {
 const overGame = async (res, connection, server) => {
     let roomInfo = roomUtil.getRoom(res.room)
     let scores = roomInfo.getRoomRecords().scores
+    console.log('游戏结束', scores)
     //记录结束时间
     roomInfo.room_end = Date.now()
     //更新房间状态为已完成
