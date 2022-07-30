@@ -145,7 +145,7 @@ const doComparePokers = (res, connection, server, group) => {
             )
             conn.send(JSON.stringify(msg))
         })
-        console.log('当前比试第' + group + '组')
+        console.log('当前比试第' + (group + 1) + '组')
         //判断是否需要比试下一组
         if (group < 2) {
             doComparePokers(res, connection, server, group + 1)
@@ -323,6 +323,7 @@ module.exports = {
                 const roomConnections = server.connections.filter(item => {
                     return item.room == res.room
                 })
+                //获取该房间的已连接的用户数组
                 const users = roomConnections.map(item => {
                     return item.user
                 })
@@ -330,29 +331,43 @@ module.exports = {
                     throw new ServiceError('房间内已经有4个人了')
                 }
                 let roomInfo = roomUtil.getRoom(res.room)
-                //用户信息集合
-                let userInfos = []
                 //如果该房间在对局中，则需要初始化此用户的一些信息
                 if (roomInfo && roomInfo.room_status == 1) {
                     //获取records
                     let records = roomInfo.getRoomRecords()
                     let scores = records.scores
                     let passData = records.passData
-                    //如果是中途退出再进来则不重置分数
+                    let userInfos = records.userInfos
+                    console.log(
+                        '用户加入房间',
+                        res.user.user_id,
+                        records.pokers ? records.pokers[res.user.user_id] : null
+                    )
+                    //分数不存在重置分数
                     if (!scores[res.user.user_id]) {
                         scores[res.user.user_id] = 0
                     }
+                    //passData不存在重置passData
                     if (!passData[res.user.user_id]) {
                         passData[res.user.user_id] = 0
                     }
+                    //判断是否已经缓存过此用户信息
+                    const hasUser = userInfos.some(item => {
+                        return item.user_id == res.user.user_id
+                    })
+                    console.log('是否缓存过用户信息了', hasUser)
+                    //如果没有缓存过则加入
+                    if (!hasUser) {
+                        userInfos = [...userInfos, res.user]
+                    }
+                    //更新到records
                     records.scores = scores
                     records.passData = passData
+                    records.userInfos = userInfos
                     //重新设置records
                     roomInfo.setRoomRecords(records)
                     //更新room
                     roomUtil.updateRoom(res.room, roomInfo)
-                    //获取用户信息集合
-                    userInfos = await roomUtil.getUserInfoByScores(roomInfo)
                 }
                 roomConnections.forEach(conn => {
                     if (conn === connection) {
@@ -369,7 +384,7 @@ module.exports = {
                                 discardsUser:
                                     roomInfo?.getRoomRecords()?.discardsUser,
                                 isSelf: true,
-                                userInfos: userInfos
+                                userInfos: roomInfo?.getRoomRecords()?.userInfos
                             },
                             `你已加入房间`
                         )
@@ -397,7 +412,8 @@ module.exports = {
                                         roomInfo?.getRoomRecords()
                                             ?.discardsUser,
                                     isSelf: false,
-                                    userInfos: userInfos
+                                    userInfos:
+                                        roomInfo?.getRoomRecords()?.userInfos
                                 },
                                 `${res.user.user_nickname}加入房间`
                             )
@@ -415,6 +431,7 @@ module.exports = {
                 if (roomConnections.length <= 1) {
                     throw new Error('开始游戏必须不少于两个人')
                 }
+                //从数据库中查询到房间信息
                 let roomInfo = await RoomService.query(res.room)
                 //转为Room对象
                 roomInfo = roomUtil.initRoomObject(roomInfo)
@@ -442,6 +459,8 @@ module.exports = {
                 })
                 records.scores = scores
                 records.passData = passData
+                //记录当前的用户信息
+                records.userInfos = users
                 //重新设置records
                 roomInfo.setRoomRecords(records)
                 //记录
@@ -450,8 +469,6 @@ module.exports = {
                 roomUtil.licensing(res.room, Object.keys(scores))
                 //重新获取
                 roomInfo = roomUtil.getRoom(res.room)
-                //用户信息集合
-                let userInfos = await roomUtil.getUserInfoByScores(roomInfo)
                 //推送
                 roomConnections.forEach(conn => {
                     const msg = new Message(
@@ -465,7 +482,7 @@ module.exports = {
                             scores: roomInfo.getRoomRecords().scores,
                             discardsUser:
                                 roomInfo.getRoomRecords().discardsUser,
-                            userInfos: userInfos
+                            userInfos: roomInfo.getRoomRecords().userInfos
                         },
                         '游戏开始，推送数据'
                     )
@@ -717,7 +734,6 @@ module.exports = {
             })
             const roomInfo = roomUtil.getRoom(connection.room)
             if (roomInfo) {
-                let userInfos = []
                 if (roomInfo.room_status == 1) {
                     //获取records
                     let records = roomInfo.getRoomRecords()
@@ -730,17 +746,20 @@ module.exports = {
                     if (!records.pokers[connection.user.user_id]) {
                         let scores = records.scores
                         let passData = records.passData
+                        let userInfos = records.userInfos
                         delete scores[connection.user.user_id]
                         delete passData[connection.user.user_id]
+                        userInfos = userInfos.filter(item => {
+                            return item.user_id != connection.user.user_id
+                        })
                         records.scores = scores
                         records.passData = passData
+                        records.userInfos = userInfos
                         //重新设置records
                         roomInfo.setRoomRecords(records)
                         //更新room
                         roomUtil.updateRoom(connection.room, roomInfo)
                     }
-                    //获取用户信息集合
-                    userInfos = await roomUtil.getUserInfoByScores(roomInfo)
                 }
                 roomConnections.forEach(conn => {
                     if (conn != connection) {
@@ -754,7 +773,7 @@ module.exports = {
                                 currentGame:
                                     roomInfo?.getRoomRecords()?.currentGame,
                                 scores: roomInfo?.getRoomRecords()?.scores,
-                                userInfos: userInfos
+                                userInfos: roomInfo?.getRoomRecords()?.userInfos
                             },
                             `${connection.user.user_nickname}离开了聊天室`
                         )

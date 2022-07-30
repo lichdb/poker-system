@@ -507,19 +507,6 @@ module.exports = {
         }
         return { hasFourUsers, unHasFourUsers }
     },
-    //获取该房间参加的玩家信息
-    async getUserInfoByScores(roomInfo) {
-        const records = roomInfo.getRoomRecords()
-        const scores = records.scores
-        let userInfos = []
-        if (scores) {
-            for (let key in scores) {
-                let user = await UserService.getUserById(key)
-                userInfos.push(user)
-            }
-        }
-        return userInfos
-    },
     //判断全部用户是否配牌完成
     getUserIsComplete(pokers, discardsUser) {
         let hasAllComplete = true
