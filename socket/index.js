@@ -474,12 +474,9 @@ module.exports = {
             }
             //配牌完成
             else if (res.type == 4) {
+                console.log('用户ID:' + res.user.user_id + ',配牌完成')
                 for (let key in res.pokers) {
-                    console.log(
-                        'user：' + key,
-                        '配牌完成，pokers',
-                        res.pokers[key]
-                    )
+                    console.log('user：' + key, 'pokers', res.pokers[key])
                 }
                 let roomInfo = roomUtil.getRoom(res.room)
                 //获取该房间的所有连接
@@ -506,10 +503,8 @@ module.exports = {
                 if (records.discardsUser == res.user.user_id) {
                     throw new Error('你已经弃牌，无法配牌')
                 }
-                //更新该用户的pokers
-                let pokers = records.pokers
-                pokers[res.user.user_id] = res.pokers[res.user.user_id]
-                records.pokers = pokers
+                //更新pokers
+                records.pokers = res.pokers
                 //设置roomRecords
                 roomInfo.setRoomRecords(records)
                 //记录
