@@ -399,9 +399,14 @@ module.exports = {
                     } else {
                         //查找是否同时多个在线
                         if (conn.user.user_id === connection.user.user_id) {
+                            // sendErrorMsg(
+                            //     conn,
+                            //     '你在另一个地方登录，当前主机被迫下线',
+                            //     true
+                            // )
                             sendErrorMsg(
-                                conn,
-                                '你在另一个地方登录，当前主机被迫下线',
+                                connection,
+                                '你已经在房间里了，无法重复加入',
                                 true
                             )
                         } else {
