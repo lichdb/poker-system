@@ -12,7 +12,7 @@ const filter = require('./filter/filter.js')
 const UnauthorizedError = require('./error/UnauthorizedError')
 //引入socket
 const ws = require('nodejs-websocket')
-const socket = require('./socket')
+const socketBJ = require('./socket/index_bj')
 const UserService = require('./service/UserService')
 
 //创建web服务器
@@ -98,26 +98,25 @@ app.use((error, req, res, next) => {
     }
 })
 
-//创建连接
-const createServer = () => {
+//创建比鸡连接
+const createServerBJ = () => {
     let server = ws
         .createServer(connection => {
             //接收消息
             connection.on('text', result => {
-                socket.receiveMessage(result, connection, server)
+                socketBJ.receiveMessage(result, connection, server)
             })
             //连接出错
             connection.on('error', code => {
-                socket.error(code, connection, server)
+                socketBJ.error(code, connection, server)
             })
             //连接关闭
             connection.on('close', code => {
-                socket.close(code, connection, server)
+                socketBJ.close(code, connection, server)
             })
         })
         .listen(3041)
 
     return server
 }
-
-const server = createServer()
+createServerBJ()

@@ -10,7 +10,8 @@ class Room {
         room_begin,
         room_end,
         room_status,
-        room_players
+        room_players,
+        room_type
     ) {
         //对局ID
         this.room_id = room_id
@@ -28,6 +29,8 @@ class Room {
         this.room_status = room_status
         //参加玩家
         this.room_players = room_players
+        //模式，0表示比鸡，1表示炸鸡
+        this.room_type = room_type
     }
 
     getRoomRecords() {

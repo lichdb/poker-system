@@ -98,6 +98,7 @@ service.queryHistory = async req => {
             'room.room_end',
             'room.room_status',
             'room.room_players',
+            'room.room_type',
             'user.user_nickname'
         ],
         tables
@@ -108,12 +109,14 @@ service.queryHistory = async req => {
 //创建房间
 service.create = async req => {
     let room_mode = req.body.room_mode
+    let room_type = req.body.room_type
 
-    if (util.hasUndefinedParam([room_mode])) {
+    if (util.hasUndefinedParam([room_mode, room_type])) {
         throw new ServiceError('参数异常')
     }
     room_mode = Number(room_mode)
-    if (isNaN(room_mode)) {
+    room_type = Number(room_type)
+    if (isNaN(room_mode) || isNaN(room_type)) {
         throw new ServiceError('参数异常')
     }
     const user = await UserService.getUserByToken(req)
@@ -125,7 +128,8 @@ service.create = async req => {
         Date.now(),
         null,
         0,
-        null
+        null,
+        room_type
     )
     const result = await sqlUtil.insert(room)
     if (result.affectedRows == 0) {
