@@ -2,6 +2,7 @@
 const RoomService = require('../service/RoomService')
 const roomUtil = require('./roomUtil')
 const ServiceError = require('../error/ServiceError')
+const lockQueue = require('./lock')
 //分数梯队
 const SCORE_CHELON = [2, 3, 5]
 //吃喜
@@ -10,6 +11,7 @@ const HAPPY_SCORES = {
     FOUR: 5,
     PASS: 5
 }
+
 //推送异常消息
 const sendErrorMsg = (connection, message, needRefresh) => {
     const msg = new Message(
@@ -337,78 +339,79 @@ module.exports = {
                 if (roomConnections.length > 4) {
                     throw new ServiceError('房间内已经有4个人了')
                 }
-                let roomInfo = roomUtil.getRoom(res.room)
-                //如果该房间在对局中，则需要初始化此用户的一些信息
-                if (roomInfo && roomInfo.room_status == 1) {
-                    //获取records
-                    let records = roomInfo.getRoomRecords()
-                    let scores = records.scores
-                    let passData = records.passData
-                    let userInfos = records.userInfos
-                    console.log(
-                        '用户加入房间',
-                        res.user.user_id,
-                        records.pokers ? records.pokers[res.user.user_id] : null
+                const isExist = roomConnections.some(conn => {
+                    return (
+                        conn.user.user_id === connection.user.user_id &&
+                        conn != connection
                     )
-                    //分数不存在重置分数
-                    if (!scores[res.user.user_id]) {
-                        scores[res.user.user_id] = 0
-                    }
-                    //passData不存在重置passData
-                    if (!passData[res.user.user_id]) {
-                        passData[res.user.user_id] = 0
-                    }
-                    //判断是否已经缓存过此用户信息
-                    const hasUser = userInfos.some(item => {
-                        return item.user_id == res.user.user_id
-                    })
-                    console.log('是否缓存过用户信息了', hasUser)
-                    //如果没有缓存过则加入
-                    if (!hasUser) {
-                        userInfos = [...userInfos, res.user]
-                    }
-                    //更新到records
-                    records.scores = scores
-                    records.passData = passData
-                    records.userInfos = userInfos
-                    //重新设置records
-                    roomInfo.setRoomRecords(records)
-                    //更新room
-                    roomUtil.updateRoom(res.room, roomInfo)
+                })
+                if (isExist) {
+                    throw new ServiceError('你已经在房间里了，无法重复加入')
                 }
-                roomConnections.forEach(conn => {
-                    if (conn === connection) {
-                        const msg = new Message(
-                            1,
-                            conn.room,
-                            conn.user,
-                            {
-                                users: users,
-                                pokers: roomInfo?.getRoomRecords()?.pokers,
-                                currentGame:
-                                    roomInfo?.getRoomRecords()?.currentGame,
-                                scores: roomInfo?.getRoomRecords()?.scores,
-                                discardsUser:
-                                    roomInfo?.getRoomRecords()?.discardsUser,
-                                isSelf: true,
-                                userInfos: roomInfo?.getRoomRecords()?.userInfos
-                            },
-                            `你已加入房间`
+                const fn = async () => {
+                    let roomInfo = roomUtil.getRoom(res.room)
+                    //如果该房间在对局中，则需要初始化此用户的一些信息
+                    if (roomInfo && roomInfo.room_status == 1) {
+                        //获取records
+                        let records = roomInfo.getRoomRecords()
+                        let scores = records.scores
+                        let passData = records.passData
+                        let userInfos = records.userInfos
+                        console.log(
+                            '用户加入房间',
+                            res.user.user_id,
+                            records.pokers
+                                ? records.pokers[res.user.user_id]
+                                : null
                         )
-                        conn.send(JSON.stringify(msg))
-                    } else {
-                        //查找是否同时多个在线
-                        if (conn.user.user_id === connection.user.user_id) {
-                            // sendErrorMsg(
-                            //     conn,
-                            //     '你在另一个地方登录，当前主机被迫下线',
-                            //     true
-                            // )
-                            sendErrorMsg(
-                                connection,
-                                '你已经在房间里了，无法重复加入',
-                                true
+                        //分数不存在重置分数
+                        if (!scores[res.user.user_id]) {
+                            scores[res.user.user_id] = 0
+                        }
+                        //passData不存在重置passData
+                        if (!passData[res.user.user_id]) {
+                            passData[res.user.user_id] = 0
+                        }
+                        //判断是否已经缓存过此用户信息
+                        const hasUser = userInfos.some(item => {
+                            return item.user_id == res.user.user_id
+                        })
+                        console.log('是否缓存过用户信息了', hasUser)
+                        //如果没有缓存过则加入
+                        if (!hasUser) {
+                            userInfos = [...userInfos, res.user]
+                        }
+                        //更新到records
+                        records.scores = scores
+                        records.passData = passData
+                        records.userInfos = userInfos
+                        //重新设置records
+                        roomInfo.setRoomRecords(records)
+                        //更新room
+                        roomUtil.updateRoom(res.room, roomInfo)
+                    }
+                    roomConnections.forEach(conn => {
+                        if (conn === connection) {
+                            const msg = new Message(
+                                1,
+                                conn.room,
+                                conn.user,
+                                {
+                                    users: users,
+                                    pokers: roomInfo?.getRoomRecords()?.pokers,
+                                    currentGame:
+                                        roomInfo?.getRoomRecords()?.currentGame,
+                                    scores: roomInfo?.getRoomRecords()?.scores,
+                                    discardsUser:
+                                        roomInfo?.getRoomRecords()
+                                            ?.discardsUser,
+                                    isSelf: true,
+                                    userInfos:
+                                        roomInfo?.getRoomRecords()?.userInfos
+                                },
+                                `你已加入房间`
                             )
+                            conn.send(JSON.stringify(msg))
                         } else {
                             const msg = new Message(
                                 1,
@@ -431,177 +434,191 @@ module.exports = {
                             )
                             conn.send(JSON.stringify(msg))
                         }
-                    }
-                })
+                    })
+                }
+                await lockQueue(res.room, fn)
             }
             //游戏开始
             else if (res.type == 3) {
-                //获取该房间的所有连接
-                const roomConnections = server.connections.filter(item => {
-                    return item.room == res.room
-                })
-                if (roomConnections.length <= 1) {
-                    throw new Error('开始游戏必须不少于两个人')
+                const fn = async () => {
+                    //获取该房间的所有连接
+                    const roomConnections = server.connections.filter(item => {
+                        return item.room == res.room
+                    })
+                    if (roomConnections.length <= 1) {
+                        throw new Error('开始游戏必须不少于两个人')
+                    }
+                    //从数据库中查询到房间信息
+                    let roomInfo = await RoomService.query(res.room)
+                    //转为Room对象
+                    roomInfo = roomUtil.initRoomObject(roomInfo)
+                    if (roomInfo.room_creator != res.user.user_id) {
+                        throw new Error('非房主不能开始游戏')
+                    }
+                    //获取用户数组
+                    const users = roomConnections.map(item => {
+                        return item.user
+                    })
+                    //更改房间状态
+                    roomInfo.room_status = 1
+                    //获取records
+                    let records = roomInfo.getRoomRecords()
+                    //记录当前局数
+                    records.currentGame = 1
+                    //初始化弃牌用户
+                    records.discardsUser = null
+                    //初始化每个用户的积分和单局赢的次数
+                    let scores = {}
+                    let passData = {}
+                    users.forEach(item => {
+                        scores[item.user_id] = 0
+                        passData[item.user_id] = 0
+                    })
+                    records.scores = scores
+                    records.passData = passData
+                    //记录当前的用户信息
+                    records.userInfos = users
+                    //重新设置records
+                    roomInfo.setRoomRecords(records)
+                    //记录
+                    roomUtil.updateRoom(res.room, roomInfo)
+                    //发牌
+                    roomUtil.licensing(res.room, Object.keys(scores))
+                    //重新获取
+                    roomInfo = roomUtil.getRoom(res.room)
+                    //推送
+                    roomConnections.forEach(conn => {
+                        const msg = new Message(
+                            3,
+                            conn.room,
+                            conn.user,
+                            {
+                                users: users,
+                                pokers: roomInfo.getRoomRecords().pokers,
+                                currentGame:
+                                    roomInfo.getRoomRecords().currentGame,
+                                scores: roomInfo.getRoomRecords().scores,
+                                discardsUser:
+                                    roomInfo.getRoomRecords().discardsUser,
+                                userInfos: roomInfo.getRoomRecords().userInfos
+                            },
+                            '游戏开始，推送数据'
+                        )
+                        conn.send(JSON.stringify(msg))
+                    })
                 }
-                //从数据库中查询到房间信息
-                let roomInfo = await RoomService.query(res.room)
-                //转为Room对象
-                roomInfo = roomUtil.initRoomObject(roomInfo)
-                if (roomInfo.room_creator != res.user.user_id) {
-                    throw new Error('非房主不能开始游戏')
-                }
-                //获取用户数组
-                const users = roomConnections.map(item => {
-                    return item.user
-                })
-                //更改房间状态
-                roomInfo.room_status = 1
-                //获取records
-                let records = roomInfo.getRoomRecords()
-                //记录当前局数
-                records.currentGame = 1
-                //初始化弃牌用户
-                records.discardsUser = null
-                //初始化每个用户的积分和单局赢的次数
-                let scores = {}
-                let passData = {}
-                users.forEach(item => {
-                    scores[item.user_id] = 0
-                    passData[item.user_id] = 0
-                })
-                records.scores = scores
-                records.passData = passData
-                //记录当前的用户信息
-                records.userInfos = users
-                //重新设置records
-                roomInfo.setRoomRecords(records)
-                //记录
-                roomUtil.updateRoom(res.room, roomInfo)
-                //发牌
-                roomUtil.licensing(res.room, Object.keys(scores))
-                //重新获取
-                roomInfo = roomUtil.getRoom(res.room)
-                //推送
-                roomConnections.forEach(conn => {
-                    const msg = new Message(
-                        3,
-                        conn.room,
-                        conn.user,
-                        {
-                            users: users,
-                            pokers: roomInfo.getRoomRecords().pokers,
-                            currentGame: roomInfo.getRoomRecords().currentGame,
-                            scores: roomInfo.getRoomRecords().scores,
-                            discardsUser:
-                                roomInfo.getRoomRecords().discardsUser,
-                            userInfos: roomInfo.getRoomRecords().userInfos
-                        },
-                        '游戏开始，推送数据'
-                    )
-                    conn.send(JSON.stringify(msg))
-                })
+                await lockQueue(res.room, fn)
             }
             //配牌完成
             else if (res.type == 4) {
-                console.log('用户ID:' + res.user.user_id + ',配牌完成')
-                for (let key in res.pokers) {
-                    console.log('user：' + key, 'pokers', res.pokers[key])
-                }
-                let roomInfo = roomUtil.getRoom(res.room)
-                //获取该房间的所有连接
-                const roomConnections = server.connections.filter(item => {
-                    return item.room == res.room
-                })
-                //获取用户数组
-                const users = roomConnections.map(item => {
-                    return item.user
-                })
-                const isUnComplete = res.pokers[res.user.user_id].some(item => {
-                    return item.belong[0] == -1
-                })
-                if (isUnComplete) {
-                    throw new Error('配牌还没有完成')
-                }
-                //配牌不符合规矩
-                if (!roomUtil.judgePokers(res.pokers[res.user.user_id])) {
-                    throw new Error('配牌不符合大小顺序')
-                }
-                //获取records
-                let records = roomInfo.getRoomRecords()
-                //判断是否弃牌
-                if (records.discardsUser == res.user.user_id) {
-                    throw new Error('你已经弃牌，无法配牌')
-                }
-                //更新pokers
-                records.pokers = res.pokers
-                //设置roomRecords
-                roomInfo.setRoomRecords(records)
-                //记录
-                roomUtil.updateRoom(res.room, roomInfo)
-                //判断是否全部配牌完成
-                let hasAllComplete = roomUtil.getUserIsComplete(
-                    res.pokers,
-                    records.discardsUser
-                )
-                console.log('hasAllComplete', hasAllComplete)
-                //推送配牌完成
-                roomConnections.forEach(conn => {
-                    const msg = new Message(
-                        4,
-                        conn.room,
-                        conn.user,
-                        {
-                            users: users,
-                            pokers: roomInfo.getRoomRecords().pokers,
-                            currentGame: roomInfo.getRoomRecords().currentGame,
-                            scores: roomInfo.getRoomRecords().scores,
-                            isSelf: conn === connection,
-                            hasAllComplete: hasAllComplete
-                        },
-                        `${res.user.user_nickname}已配牌完成`
+                const fn = async () => {
+                    console.log('用户ID:' + res.user.user_id + ',配牌完成')
+                    for (let key in res.pokers) {
+                        console.log('user：' + key, 'pokers', res.pokers[key])
+                    }
+                    let roomInfo = roomUtil.getRoom(res.room)
+                    //获取该房间的所有连接
+                    const roomConnections = server.connections.filter(item => {
+                        return item.room == res.room
+                    })
+                    //获取用户数组
+                    const users = roomConnections.map(item => {
+                        return item.user
+                    })
+                    const isUnComplete = res.pokers[res.user.user_id].some(
+                        item => {
+                            return item.belong[0] == -1
+                        }
                     )
-                    conn.send(JSON.stringify(msg))
-                })
-                //全部配牌完成，自动比牌
-                if (hasAllComplete) {
-                    doComparePokers(res, connection, server, 0)
+                    if (isUnComplete) {
+                        throw new Error('配牌还没有完成')
+                    }
+                    //配牌不符合规矩
+                    if (!roomUtil.judgePokers(res.pokers[res.user.user_id])) {
+                        throw new Error('配牌不符合大小顺序')
+                    }
+                    //获取records
+                    let records = roomInfo.getRoomRecords()
+                    //判断是否弃牌
+                    if (records.discardsUser == res.user.user_id) {
+                        throw new Error('你已经弃牌，无法配牌')
+                    }
+                    //更新pokers
+                    records.pokers = res.pokers
+                    //设置roomRecords
+                    roomInfo.setRoomRecords(records)
+                    //记录
+                    roomUtil.updateRoom(res.room, roomInfo)
+                    //判断是否全部配牌完成
+                    let hasAllComplete = roomUtil.getUserIsComplete(
+                        res.pokers,
+                        records.discardsUser
+                    )
+                    console.log('hasAllComplete', hasAllComplete)
+                    //推送配牌完成
+                    roomConnections.forEach(conn => {
+                        const msg = new Message(
+                            4,
+                            conn.room,
+                            conn.user,
+                            {
+                                users: users,
+                                pokers: roomInfo.getRoomRecords().pokers,
+                                currentGame:
+                                    roomInfo.getRoomRecords().currentGame,
+                                scores: roomInfo.getRoomRecords().scores,
+                                isSelf: conn === connection,
+                                hasAllComplete: hasAllComplete
+                            },
+                            `${res.user.user_nickname}已配牌完成`
+                        )
+                        conn.send(JSON.stringify(msg))
+                    })
+                    //全部配牌完成，自动比牌
+                    if (hasAllComplete) {
+                        doComparePokers(res, connection, server, 0)
+                    }
                 }
+                await lockQueue(res.room, fn)
             }
             //解散房间
             else if (res.type == 8) {
-                let roomInfo = await RoomService.query(res.room)
-                roomInfo = roomUtil.initRoomObject(roomInfo)
-                if (roomInfo.room_creator != res.user.user_id) {
-                    throw new Error('非房主无法解散房间')
+                const fn = async () => {
+                    let roomInfo = await RoomService.query(res.room)
+                    roomInfo = roomUtil.initRoomObject(roomInfo)
+                    if (roomInfo.room_creator != res.user.user_id) {
+                        throw new Error('非房主无法解散房间')
+                    }
+                    //解散房间
+                    await RoomService.dissolution(res.room)
+                    //清空缓存中的roomInfo
+                    const cacheRoom = roomUtil.getRoom(res.room)
+                    if (cacheRoom) {
+                        roomUtil.removeRoom(res.room)
+                    }
+                    //获取该房间的所有连接
+                    const roomConnections = server.connections.filter(item => {
+                        return item.room == res.room
+                    })
+                    //获取用户数组
+                    const users = roomConnections.map(item => {
+                        return item.user
+                    })
+                    //推送
+                    roomConnections.forEach(conn => {
+                        const msg = new Message(
+                            8,
+                            conn.room,
+                            conn.user,
+                            {
+                                users: users
+                            },
+                            `房间已解散`
+                        )
+                        conn.send(JSON.stringify(msg))
+                    })
                 }
-                //解散房间
-                await RoomService.dissolution(res.room)
-                //清空缓存中的roomInfo
-                const cacheRoom = roomUtil.getRoom(res.room)
-                if (cacheRoom) {
-                    roomUtil.removeRoom(res.room)
-                }
-                //获取该房间的所有连接
-                const roomConnections = server.connections.filter(item => {
-                    return item.room == res.room
-                })
-                //获取用户数组
-                const users = roomConnections.map(item => {
-                    return item.user
-                })
-                //推送
-                roomConnections.forEach(conn => {
-                    const msg = new Message(
-                        8,
-                        conn.room,
-                        conn.user,
-                        {
-                            users: users
-                        },
-                        `房间已解散`
-                    )
-                    conn.send(JSON.stringify(msg))
-                })
+                await lockQueue(res.room, fn)
             }
             //接收快捷消息
             else if (res.type == 9) {
@@ -662,63 +679,66 @@ module.exports = {
             }
             //弃牌通知
             else if (res.type == 11) {
-                //获取房间信息
-                let roomInfo = roomUtil.getRoom(res.room)
-                //获取records
-                let records = roomInfo.getRoomRecords()
-                //两个人的对局无法弃牌
-                if (Object.keys(records.pokers).length == 2) {
-                    throw new Error('两个人对局无法弃牌')
-                }
-                //如果已经有玩家弃牌了
-                if (records.discardsUser) {
-                    throw new Error('已经有人弃牌了，你无法弃牌')
-                }
-                records.discardsUser = res.user.user_id
-                //重新设置records
-                roomInfo.setRoomRecords(records)
-                //记录
-                roomUtil.updateRoom(res.room, roomInfo)
-                //获取该房间的所有连接
-                const roomConnections = server.connections.filter(item => {
-                    return item.room == res.room
-                })
-                //获取用户数组
-                const users = roomConnections.map(item => {
-                    return item.user
-                })
-                //判断是否全部配牌完成
-                let hasAllComplete = roomUtil.getUserIsComplete(
-                    records.pokers,
-                    records.discardsUser
-                )
-                console.log('hasAllComplete', hasAllComplete)
-                //推送
-                roomConnections.forEach(conn => {
-                    const msg = new Message(
-                        11,
-                        conn.room,
-                        conn.user,
-                        {
-                            users: users,
-                            discardsUser:
-                                roomInfo.getRoomRecords().discardsUser,
-                            pokers: roomInfo.getRoomRecords().pokers,
-                            isSelf: conn === connection,
-                            hasAllComplete: hasAllComplete
-                        },
-                        `${res.user.user_nickname}已经弃牌了`
+                const fn = async () => {
+                    //获取房间信息
+                    let roomInfo = roomUtil.getRoom(res.room)
+                    //获取records
+                    let records = roomInfo.getRoomRecords()
+                    //两个人的对局无法弃牌
+                    if (Object.keys(records.pokers).length == 2) {
+                        throw new Error('两个人对局无法弃牌')
+                    }
+                    //如果已经有玩家弃牌了
+                    if (records.discardsUser) {
+                        throw new Error('已经有人弃牌了，你无法弃牌')
+                    }
+                    records.discardsUser = res.user.user_id
+                    //重新设置records
+                    roomInfo.setRoomRecords(records)
+                    //记录
+                    roomUtil.updateRoom(res.room, roomInfo)
+                    //获取该房间的所有连接
+                    const roomConnections = server.connections.filter(item => {
+                        return item.room == res.room
+                    })
+                    //获取用户数组
+                    const users = roomConnections.map(item => {
+                        return item.user
+                    })
+                    //判断是否全部配牌完成
+                    let hasAllComplete = roomUtil.getUserIsComplete(
+                        records.pokers,
+                        records.discardsUser
                     )
-                    conn.send(JSON.stringify(msg))
-                })
+                    console.log('hasAllComplete', hasAllComplete)
+                    //推送
+                    roomConnections.forEach(conn => {
+                        const msg = new Message(
+                            11,
+                            conn.room,
+                            conn.user,
+                            {
+                                users: users,
+                                discardsUser:
+                                    roomInfo.getRoomRecords().discardsUser,
+                                pokers: roomInfo.getRoomRecords().pokers,
+                                isSelf: conn === connection,
+                                hasAllComplete: hasAllComplete
+                            },
+                            `${res.user.user_nickname}已经弃牌了`
+                        )
+                        conn.send(JSON.stringify(msg))
+                    })
 
-                //全部配牌完成，自动比牌
-                if (hasAllComplete) {
-                    //这里设置1s延迟是因为前端多了个弃牌提示
-                    setTimeout(() => {
-                        doComparePokers(res, connection, server, 0)
-                    }, 1000)
+                    //全部配牌完成，自动比牌
+                    if (hasAllComplete) {
+                        //这里设置1s延迟是因为前端多了个弃牌提示
+                        setTimeout(() => {
+                            doComparePokers(res, connection, server, 0)
+                        }, 1000)
+                    }
                 }
+                await lockQueue(res.room, fn)
             }
         } catch (error) {
             console.log(error)
