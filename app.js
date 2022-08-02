@@ -13,6 +13,7 @@ const UnauthorizedError = require('./error/UnauthorizedError')
 //引入socket
 const ws = require('nodejs-websocket')
 const socketBJ = require('./socket/index_bj')
+const socketZJ = require('./socket/index_zj')
 const UserService = require('./service/UserService')
 
 //创建web服务器
@@ -119,4 +120,26 @@ const createServerBJ = () => {
 
     return server
 }
+//创建炸鸡连接
+const createServerZJ = () => {
+    let server = ws
+        .createServer(connection => {
+            //接收消息
+            connection.on('text', result => {
+                socketZJ.receiveMessage(result, connection, server)
+            })
+            //连接出错
+            connection.on('error', code => {
+                socketZJ.error(code, connection, server)
+            })
+            //连接关闭
+            connection.on('close', code => {
+                socketZJ.close(code, connection, server)
+            })
+        })
+        .listen(3042)
+
+    return server
+}
 createServerBJ()
+createServerZJ()

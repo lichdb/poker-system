@@ -17,7 +17,7 @@ module.exports = {
         delete rooms[room_id]
     },
     //发牌
-    licensing(room_id, users) {
+    licensingBJ(room_id, users) {
         let pokers = JSON.parse(JSON.stringify(pokersConfig))
         const room = this.getRoom(room_id)
         let obj = {}
@@ -36,6 +36,38 @@ module.exports = {
         }
         users.forEach(user_id => {
             for (let i = 0; i < 9; i++) {
+                randomPoker(user_id)
+            }
+            obj[user_id] = obj[user_id].sort((a, b) => {
+                return a.points - b.points
+            })
+        })
+        console.log('最后发的牌', obj)
+        const records = room.getRoomRecords()
+        records.pokers = obj
+        room.setRoomRecords(records)
+        this.updateRoom(room_id, room)
+    },
+    //炸鸡发牌
+    licensingZJ(room_id, users) {
+        let pokers = JSON.parse(JSON.stringify(pokersConfig))
+        const room = this.getRoom(room_id)
+        let obj = {}
+        users.forEach(user_id => {
+            obj[user_id] = []
+        })
+        //给一个用户随机抽张牌
+        const randomPoker = user_id => {
+            //随机抽取一张牌
+            const index = Math.floor(Math.random() * pokers.length)
+            const poker = pokers[index]
+            console.log('随机抽牌', index, '抽到的牌', poker)
+            obj[user_id].push(poker)
+            //删除这张牌，防止重复
+            pokers.splice(index, 1)
+        }
+        users.forEach(user_id => {
+            for (let i = 0; i < 3; i++) {
                 randomPoker(user_id)
             }
             obj[user_id] = obj[user_id].sort((a, b) => {

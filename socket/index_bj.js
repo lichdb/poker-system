@@ -243,7 +243,7 @@ const goNextGame = (res, connection, server) => {
             //记录
             roomUtil.updateRoom(res.room, roomInfo)
             //发牌
-            roomUtil.licensing(res.room, Object.keys(scores))
+            roomUtil.licensingBJ(res.room, Object.keys(scores))
             //获取房间
             roomInfo = roomUtil.getRoom(res.room)
             //推送
@@ -483,7 +483,7 @@ module.exports = {
                     //记录
                     roomUtil.updateRoom(res.room, roomInfo)
                     //发牌
-                    roomUtil.licensing(res.room, Object.keys(scores))
+                    roomUtil.licensingBJ(res.room, Object.keys(scores))
                     //重新获取
                     roomInfo = roomUtil.getRoom(res.room)
                     //推送
