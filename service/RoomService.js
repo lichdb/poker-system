@@ -47,7 +47,7 @@ setInterval(async () => {
     } catch (error) {
         console.log('定时删除任务', error)
     }
-}, 7 * 24 * 60 * 60 * 1000)
+}, 3 * 24 * 60 * 60 * 1000)
 
 //查询对局
 service.queryRoom = async req => {

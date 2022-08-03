@@ -513,9 +513,6 @@ module.exports = {
             else if (res.type == 4) {
                 const fn = async () => {
                     console.log('用户ID:' + res.user.user_id + ',配牌完成')
-                    for (let key in res.pokers) {
-                        console.log('user：' + key, 'pokers', res.pokers[key])
-                    }
                     let roomInfo = roomUtil.getRoom(res.room)
                     //获取该房间的所有连接
                     const roomConnections = server.connections.filter(item => {
@@ -544,14 +541,19 @@ module.exports = {
                         throw new Error('你已经弃牌，无法配牌')
                     }
                     //更新pokers
-                    records.pokers = res.pokers
+                    let pokers = records.pokers
+                    pokers[res.user.user_id] = res.pokers[res.user.user_id]
+                    records.pokers = pokers
+                    for (let key in pokers) {
+                        console.log('user：' + key, 'pokers', pokers[key])
+                    }
                     //设置roomRecords
                     roomInfo.setRoomRecords(records)
                     //记录
                     roomUtil.updateRoom(res.room, roomInfo)
                     //判断是否全部配牌完成
                     let hasAllComplete = roomUtil.getUserIsComplete(
-                        res.pokers,
+                        pokers,
                         records.discardsUser
                     )
                     console.log('hasAllComplete', hasAllComplete)
