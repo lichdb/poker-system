@@ -465,6 +465,14 @@ module.exports = {
                     if (records.operations[res.user.user_id] == 2) {
                         throw new Error('你已经丢牌，无法上分')
                     }
+                    //获取没有丢牌的用户数组
+                    const unDiscaderUsers = roomUtil.getUnDiscardUsers(
+                        Object.keys(records.pokers),
+                        records.operations
+                    )
+                    if (unDiscaderUsers.length == 1) {
+                        throw new Error('仅剩一人无法上分')
+                    }
 
                     //上分的分数=跟牌分数*倍数
                     let upScore = records.followScore * num
@@ -574,9 +582,7 @@ module.exports = {
                                 innerScores:
                                     roomInfo.getRoomRecords().innerScores
                             },
-                            conn === connection
-                                ? ''
-                                : `${res.user.user_nickname}看牌`
+                            `${res.user.user_nickname}看牌`
                         )
                         conn.send(JSON.stringify(msg))
                     })
@@ -656,9 +662,7 @@ module.exports = {
                                     roomInfo.getRoomRecords().innerScores,
                                 unDiscaderUsers: unDiscaderUsers
                             },
-                            conn === connection
-                                ? '你已丢牌'
-                                : `${res.user.user_nickname}已丢牌`
+                            `${res.user.user_nickname}已丢牌`
                         )
                         conn.send(JSON.stringify(msg))
                     })
@@ -691,6 +695,9 @@ module.exports = {
                     )
                     if (unDiscaderUsers.length > 2) {
                         throw new Error('超过2人在场无法见面')
+                    }
+                    if (unDiscaderUsers.length == 1) {
+                        throw new Error('仅剩一人无法见面')
                     }
                     let upScore = records.followScore
                     //已经看过牌了，则双倍
@@ -733,7 +740,7 @@ module.exports = {
                                     roomInfo.getRoomRecords().innerScores
                             },
                             conn === connection
-                                ? '请求见面'
+                                ? ''
                                 : `${res.user.user_nickname}请求见面`
                         )
                         conn.send(JSON.stringify(msg))
