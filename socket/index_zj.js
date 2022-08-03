@@ -771,7 +771,7 @@ module.exports = {
                                     roomInfo.getRoomRecords().innerScores
                             },
                             conn === connection
-                                ? ''
+                                ? '见面请求已发送'
                                 : `${res.user.user_nickname}请求见面`
                         )
                         conn.send(JSON.stringify(msg))
