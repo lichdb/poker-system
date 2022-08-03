@@ -77,9 +77,11 @@ const doCountScore = (res, connection, server) => {
                 )
             })
             //赢者闷牌次数大于0才能吃喜
+            console.log('闷牌次数', winUser, records.stuffies[winUser])
             if (records.stuffies[winUser] > 0) {
                 //豹子加分多，同花顺加分稍微少点
                 const happyScore = isBao ? HAPPY_SCORES[1] : HAPPY_SCORES[0]
+                console.log('吃喜加分', happyScore)
                 records.scores[winUser] += happyScore * otherUsers.length
                 //其余用户减分
                 otherUsers.forEach(item => {
