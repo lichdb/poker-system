@@ -556,5 +556,29 @@ module.exports = {
             }
         }
         return hasAllComplete
+    },
+    //获取没有丢牌的用户数组
+    getUnDiscardUsers(users, operations) {
+        return users.filter(item => {
+            return operations[item] == 0 || operations[item] == 1
+        })
+    },
+    //获取新的发言人
+    getNewSpokesman(users, operations, spokesman) {
+        //获取发言人的序列
+        const spokesIndex = users.findIndex(item => {
+            return item == spokesman
+        })
+        let newSpokesIndex =
+            spokesIndex == users.length - 1 ? 0 : spokesIndex + 1
+        //如果新发言人已经丢牌
+        if (operations[users[newSpokesIndex]] == 2) {
+            return this.getNewSpokesman(
+                users,
+                operations,
+                users[newSpokesIndex]
+            )
+        }
+        return users[newSpokesIndex]
     }
 }
