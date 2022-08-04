@@ -559,6 +559,8 @@ module.exports = {
                     }
                     //已经私下看过牌了，则只增加一次明牌次数
                     else {
+                        //该用户上分分数为双倍分数
+                        upScore = upScore * 2
                         //增加一次明牌次数
                         records.opens[res.user.user_id] += 1
                     }
