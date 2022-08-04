@@ -6,41 +6,34 @@ const sqlUtil = new SqlUtil(pool, 'room')
 const lockJS = require('./lock')
 const RoomService = require('../service/RoomService')
 
-const hand = async () => {
-    let roomInfo = await RoomService.queryRoom({
-        body: {
-            room_id: 298
-        }
-    })
-    roomInfo = roomUtil.initRoomObject(roomInfo)
+const pokers = [
+    {
+        type: 0,
+        value: '4',
+        points: 16
+    },
+    {
+        type: 0,
+        value: 'K',
+        points: 52
+    },
+    { type: 1, value: 'Q', points: 47 }
+]
 
-    const fn1 = () => {
-        return new Promise(resolve => {
-            let records = roomInfo.getRoomRecords()
-            setTimeout(() => {
-                records.scores[7] = 19
-                //重新设置records
-                roomInfo.setRoomRecords(records)
-                console.log('fn1', roomInfo.getRoomRecords().scores)
-                resolve()
-            }, 1000)
-        })
-    }
+const pokers2 = [
+    {
+        type: 3,
+        value: '6',
+        points: 21
+    },
+    {
+        type: 1,
+        value: 'K',
+        points: 51
+    },
+    { type: 2, value: 'Q', points: 46 }
+]
 
-    const fn2 = () => {
-        return new Promise(resolve => {
-            let records = roomInfo.getRoomRecords()
-            setTimeout(() => {
-                records.scores['13'] = 19
-                //重新设置records
-                roomInfo.setRoomRecords(records)
-                console.log('fn2', roomInfo.getRoomRecords().scores)
-                resolve()
-            }, 500)
-        })
-    }
-    lockJS(298, fn1)
-    lockJS(298, fn2)
-}
+const flag = roomUtil.compareTwoPokers(pokers, pokers2)
 
-hand()
+console.log(flag)

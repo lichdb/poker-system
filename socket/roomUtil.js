@@ -431,7 +431,7 @@ module.exports = {
             //最大牌一样
             if (resA.maxPoker.value == resB.maxPoker.value) {
                 //第二牌一样
-                if (resA.secondPoker.value == resB.maxPoker.value) {
+                if (resA.secondPoker.value == resB.secondPoker.value) {
                     //三张牌都一样
                     if (resA.minPoker.value == resB.minPoker.value) {
                         //比较花色
