@@ -515,7 +515,14 @@ module.exports = {
                     if (unDiscardUsers.length == 1) {
                         throw new Error('仅剩一人无法上分')
                     }
-
+                    console.log(
+                        '上分时私人看牌次数',
+                        records.watchNumbers[res.user.user_id]
+                    )
+                    //如果私下看过牌并且倍数大于1
+                    if (records.watchNumbers[res.user.user_id] > 0 && num > 1) {
+                        throw new Error('当前只能1倍上分噢')
+                    }
                     //上分的分数=跟牌分数*倍数
                     let upScore = records.followScore * num
                     //上分大小限制
@@ -528,25 +535,33 @@ module.exports = {
                     ) {
                         throw new Error('每人最多不看牌上分5次')
                     }
-                    //更新followScore
-                    records.followScore = upScore
-                    //如果已经看过牌了
-                    if (records.operations[res.user.user_id] == 1) {
-                        //该用户上分分数为双倍分数
-                        upScore = upScore * 2
+                    //没有私下看过别人的牌，则正常处理
+                    if (records.watchNumbers[res.user.user_id] == 0) {
+                        //更新followScore
+                        records.followScore = upScore
+                        //如果已经看过牌了
+                        if (records.operations[res.user.user_id] == 1) {
+                            //该用户上分分数为双倍分数
+                            upScore = upScore * 2
+                            //增加一次明牌次数
+                            records.opens[res.user.user_id] += 1
+                        }
+                        //如果没有看牌
+                        else {
+                            //增加闷牌次数
+                            records.stuffies[res.user.user_id] += 1
+                        }
+                        //扣除用户分数
+                        records.scores[res.user.user_id] =
+                            records.scores[res.user.user_id] - upScore
+                        //增加盘内分数
+                        records.innerScores += upScore
+                    }
+                    //已经私下看过牌了，则只增加一次明牌次数
+                    else {
                         //增加一次明牌次数
                         records.opens[res.user.user_id] += 1
                     }
-                    //如果没有看牌
-                    else {
-                        //增加闷牌次数
-                        records.stuffies[res.user.user_id] += 1
-                    }
-                    //扣除用户分数
-                    records.scores[res.user.user_id] =
-                        records.scores[res.user.user_id] - upScore
-                    //增加盘内分数
-                    records.innerScores += upScore
                     //获取新的发言人
                     const newSpokesman = roomUtil.getNewSpokesman(
                         Object.keys(records.pokers),
