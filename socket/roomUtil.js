@@ -427,18 +427,17 @@ module.exports = {
             if (this.isPair(pokersB)) {
                 return false
             }
-
             //AB牌都是单支
             //最大牌一样
             if (resA.maxPoker.value == resB.maxPoker.value) {
                 //第二牌一样
                 if (resA.secondPoker.value == resB.maxPoker.value) {
                     //三张牌都一样
-                    if (resA.minPoker.points == resB.minPoker.points) {
+                    if (resA.minPoker.value == resB.minPoker.value) {
                         //比较花色
                         return resA.maxPoker.points > resB.maxPoker.points
                     }
-                    return resA.minPoker > resB.minPoker
+                    return resA.minPoker.points > resB.minPoker.points
                 }
                 return resA.secondPoker.points > resB.secondPoker.points
             }
