@@ -10,6 +10,21 @@ const FOLLOW_SCORE = 1
 //吃喜分数
 const HAPPY_SCORES = [5, 8]
 
+/**
+ * records包含的基本字段
+ * scores   记录每个用户的得分
+ * operations   记录每个用户的操作，值为0/1/2，分别表示未看牌/已看牌/已丢牌，每一局会重置
+ * currentGame  当前对局是第几局
+ * pokers   记录每个用户该局的牌，每一局会重置
+ * userInfos    记录参与对局的用户信息，不会随着用户退出而变化
+ * followScore  记录跟牌分数，每一局会重置
+ * spokesman    记录当前发言人ID，每一次发言人变换都会更新
+ * innerScores  每一局的盘内总分，每一局会重置
+ * watchNumbers 记录每一次讲话私下看牌的次数
+ * opens    每个用户的明牌上分次数
+ * stuffies    每个用户的闷牌上分次数
+ */
+
 //推送异常消息
 const sendErrorMsg = (connection, message, needRefresh) => {
     const msg = new Message(
@@ -40,26 +55,26 @@ const doCountScore = (res, connection, server) => {
         //获取records
         let records = roomInfo.getRoomRecords()
         //获取没有丢牌的用户
-        let unDiscaderUsers = roomUtil.getUnDiscardUsers(
+        let unDiscardUsers = roomUtil.getUnDiscardUsers(
             Object.keys(records.pokers),
             records.operations
         )
-        console.log('unDiscaderUsers', unDiscaderUsers)
+        console.log('unDiscardUsers', unDiscardUsers)
         //记录赢家用户ID
         let winUser = null
         //如果只有一个则直接给这个用户加上盘内分数
-        if (unDiscaderUsers.length == 1) {
-            winUser = unDiscaderUsers[0]
+        if (unDiscardUsers.length == 1) {
+            winUser = unDiscardUsers[0]
         }
         //如果不是一个，那么就是2个，获取赢家
         else {
             //获取赢的用户ID
             winUser = roomUtil.compareTwoPokers(
-                records.pokers[unDiscaderUsers[0]],
-                records.pokers[unDiscaderUsers[1]]
+                records.pokers[unDiscardUsers[0]],
+                records.pokers[unDiscardUsers[1]]
             )
-                ? unDiscaderUsers[0]
-                : unDiscaderUsers[1]
+                ? unDiscardUsers[0]
+                : unDiscardUsers[1]
         }
         //赢者加分
         records.scores[winUser] += records.innerScores
@@ -68,7 +83,10 @@ const doCountScore = (res, connection, server) => {
         const isTHS =
             roomUtil.isSameFlower(records.pokers[winUser]) &&
             roomUtil.isShun(records.pokers[winUser])
-        if (isBao || isTHS) {
+        //赢者闷牌次数大于0才能吃喜
+        console.log('赢者闷牌次数', winUser, records.stuffies[winUser])
+        //豹子、同花顺并且闷牌次数大于0才会吃喜
+        if ((isBao || isTHS) && records.stuffies[winUser] > 0) {
             //获取明牌和闷牌次数总和大于0的其他用户
             const otherUsers = Object.keys(records.pokers).filter(item => {
                 return (
@@ -76,18 +94,15 @@ const doCountScore = (res, connection, server) => {
                     records.opens[item] + records.stuffies[0] > 0
                 )
             })
-            //赢者闷牌次数大于0才能吃喜
-            console.log('闷牌次数', winUser, records.stuffies[winUser])
-            if (records.stuffies[winUser] > 0) {
-                //豹子加分多，同花顺加分稍微少点
-                const happyScore = isBao ? HAPPY_SCORES[1] : HAPPY_SCORES[0]
-                console.log('吃喜加分', happyScore)
-                records.scores[winUser] += happyScore * otherUsers.length
-                //其余用户减分
-                otherUsers.forEach(item => {
-                    records.scores[item] -= happyScore
-                })
-            }
+            console.log('参与吃喜的用户', otherUsers)
+            //豹子加分多，同花顺加分稍微少点
+            const happyScore = isBao ? HAPPY_SCORES[1] : HAPPY_SCORES[0]
+            console.log('吃喜加分', happyScore)
+            records.scores[winUser] += happyScore * otherUsers.length
+            //其余用户减分
+            otherUsers.forEach(item => {
+                records.scores[item] -= happyScore
+            })
         }
         console.log('每局结束得分', records.scores)
         //判断是否结束
@@ -113,7 +128,7 @@ const doCountScore = (res, connection, server) => {
             let opens = {}
             let watchNumbers = {}
             let scores = records.scores
-            users.forEach(item => {
+            records.userInfos.forEach(item => {
                 scores[item.user_id] -= BOTTOM_SCORE
                 operations[item.user_id] = 0
                 stuffies[item.user_id] = 0
@@ -124,6 +139,7 @@ const doCountScore = (res, connection, server) => {
             records.operations = operations
             records.opens = opens
             records.stuffies = stuffies
+            records.watchNumbers = watchNumbers
             // 重新设置records
             roomInfo.setRoomRecords(records)
             //记录
@@ -147,7 +163,10 @@ const doCountScore = (res, connection, server) => {
                         operations: roomInfo.getRoomRecords().operations,
                         followScore: roomInfo.getRoomRecords().followScore,
                         spokesman: roomInfo.getRoomRecords().spokesman,
-                        innerScores: roomInfo.getRoomRecords().innerScores
+                        innerScores: roomInfo.getRoomRecords().innerScores,
+                        stuffies: roomInfo.getRoomRecords().stuffies,
+                        opens: roomInfo.getRoomRecords().opens,
+                        watchNumbers: roomInfo.getRoomRecords().watchNumbers
                     },
                     `第${roomInfo.getRoomRecords().currentGame}局开始`
                 )
@@ -327,7 +346,12 @@ module.exports = {
                                     spokesman:
                                         roomInfo?.getRoomRecords().spokesman,
                                     innerScores:
-                                        roomInfo?.getRoomRecords().innerScores
+                                        roomInfo?.getRoomRecords().innerScores,
+                                    watchNumbers:
+                                        roomInfo?.getRoomRecords().watchNumbers,
+                                    opens: roomInfo?.getRoomRecords().opens,
+                                    stuffies:
+                                        roomInfo?.getRoomRecords().stuffies
                                 },
                                 `你已加入房间`
                             )
@@ -444,7 +468,11 @@ module.exports = {
                                     roomInfo.getRoomRecords().followScore,
                                 spokesman: roomInfo.getRoomRecords().spokesman,
                                 innerScores:
-                                    roomInfo.getRoomRecords().innerScores
+                                    roomInfo.getRoomRecords().innerScores,
+                                watchNumbers:
+                                    roomInfo.getRoomRecords().watchNumbers,
+                                opens: roomInfo.getRoomRecords().opens,
+                                stuffies: roomInfo.getRoomRecords().stuffies
                             },
                             '游戏开始，推送数据'
                         )
@@ -475,16 +503,16 @@ module.exports = {
                     if (records.spokesman != res.user.user_id) {
                         throw new Error('还没到你发言，请稍等')
                     }
-                    //如果已经弃牌
+                    //如果已经丢牌
                     if (records.operations[res.user.user_id] == 2) {
                         throw new Error('你已经丢牌，无法上分')
                     }
                     //获取没有丢牌的用户数组
-                    const unDiscaderUsers = roomUtil.getUnDiscardUsers(
+                    const unDiscardUsers = roomUtil.getUnDiscardUsers(
                         Object.keys(records.pokers),
                         records.operations
                     )
-                    if (unDiscaderUsers.length == 1) {
+                    if (unDiscardUsers.length == 1) {
                         throw new Error('仅剩一人无法上分')
                     }
 
@@ -500,7 +528,6 @@ module.exports = {
                     ) {
                         throw new Error('每人最多不看牌上分5次')
                     }
-
                     //更新followScore
                     records.followScore = upScore
                     //如果已经看过牌了
@@ -552,7 +579,11 @@ module.exports = {
                                     roomInfo.getRoomRecords().followScore,
                                 spokesman: roomInfo.getRoomRecords().spokesman,
                                 innerScores:
-                                    roomInfo.getRoomRecords().innerScores
+                                    roomInfo.getRoomRecords().innerScores,
+                                stuffies: roomInfo.getRoomRecords().stuffies,
+                                opens: roomInfo.getRoomRecords().opens,
+                                watchNumbers:
+                                    roomInfo.getRoomRecords().watchNumbers
                             },
                             conn === connection
                                 ? `${upScore}分`
@@ -606,7 +637,11 @@ module.exports = {
                                     roomInfo.getRoomRecords().followScore,
                                 spokesman: roomInfo.getRoomRecords().spokesman,
                                 innerScores:
-                                    roomInfo.getRoomRecords().innerScores
+                                    roomInfo.getRoomRecords().innerScores,
+                                stuffies: roomInfo.getRoomRecords().stuffies,
+                                opens: roomInfo.getRoomRecords().opens,
+                                watchNumbers:
+                                    roomInfo.getRoomRecords().watchNumbers
                             },
                             `${res.user.user_nickname}看牌`
                         )
@@ -635,11 +670,11 @@ module.exports = {
                         throw new Error('你已丢牌，无须重复丢牌')
                     }
                     //获取没有丢牌的用户
-                    let unDiscaderUsers = roomUtil.getUnDiscardUsers(
+                    let unDiscardUsers = roomUtil.getUnDiscardUsers(
                         Object.keys(records.pokers),
                         records.operations
                     )
-                    if (unDiscaderUsers.length == 1) {
+                    if (unDiscardUsers.length == 1) {
                         throw new Error('其他人都已经丢牌了，你无法丢牌')
                     }
                     //更新牌操作状态为丢牌
@@ -650,6 +685,7 @@ module.exports = {
                         records.operations,
                         records.spokesman
                     )
+                    //重置新的发言人
                     records.spokesman = newSpokesman
                     //重置私人看牌次数
                     records.watchNumbers[newSpokesman] = 0
@@ -658,17 +694,19 @@ module.exports = {
                     //记录
                     roomUtil.updateRoom(res.room, roomInfo)
                     //再次获取未丢牌用户
-                    unDiscaderUsers = roomUtil.getUnDiscardUsers(
+                    unDiscardUsers = roomUtil.getUnDiscardUsers(
                         Object.keys(records.pokers),
                         records.operations
                     )
                     //如果只有一个用户没有丢牌则执行计算分数
-                    if (unDiscaderUsers.length == 1) {
-                        records.operations[unDiscaderUsers[0]] = 1
+                    if (unDiscardUsers.length == 1) {
+                        //更新没有丢牌的那个用户为已看牌
+                        records.operations[unDiscardUsers[0]] = 1
                         //重置spokesman
                         records.spokesman = null
                         //重新设置records
                         roomInfo.setRoomRecords(records)
+                        //执行计算逻辑
                         doCountScore(res, connection, server)
                     }
                     //推送
@@ -691,7 +729,12 @@ module.exports = {
                                 spokesman: roomInfo.getRoomRecords().spokesman,
                                 innerScores:
                                     roomInfo.getRoomRecords().innerScores,
-                                unDiscaderUsers: unDiscaderUsers
+                                stuffies: roomInfo.getRoomRecords().stuffies,
+                                opens: roomInfo.getRoomRecords().opens,
+                                watchNumbers:
+                                    roomInfo.getRoomRecords().watchNumbers,
+                                unDiscardUsers: unDiscardUsers,
+                                isSelf: conn === connection
                             },
                             `${res.user.user_nickname}已丢牌`
                         )
@@ -720,14 +763,14 @@ module.exports = {
                         throw new Error('你已丢牌无法见面')
                     }
                     //获取没有丢牌的用户
-                    let unDiscaderUsers = roomUtil.getUnDiscardUsers(
+                    let unDiscardUsers = roomUtil.getUnDiscardUsers(
                         Object.keys(records.pokers),
                         records.operations
                     )
-                    if (unDiscaderUsers.length > 2) {
+                    if (unDiscardUsers.length > 2) {
                         throw new Error('超过2人在场无法见面')
                     }
-                    if (unDiscaderUsers.length == 1) {
+                    if (unDiscardUsers.length == 1) {
                         throw new Error('仅剩一人无法见面')
                     }
                     let upScore = records.followScore
@@ -770,7 +813,11 @@ module.exports = {
                                     roomInfo.getRoomRecords().followScore,
                                 spokesman: roomInfo.getRoomRecords().spokesman,
                                 innerScores:
-                                    roomInfo.getRoomRecords().innerScores
+                                    roomInfo.getRoomRecords().innerScores,
+                                stuffies: roomInfo.getRoomRecords().stuffies,
+                                opens: roomInfo.getRoomRecords().opens,
+                                watchNumbers:
+                                    roomInfo.getRoomRecords().watchNumbers
                             },
                             conn === connection
                                 ? '见面请求已发送'
@@ -905,17 +952,14 @@ module.exports = {
                     throw new Error('你还没看牌，无法查看别人的牌')
                 }
                 //获取没有丢牌的用户
-                let unDiscaderUsers = roomUtil.getUnDiscardUsers(
+                let unDiscardUsers = roomUtil.getUnDiscardUsers(
                     Object.keys(records.pokers),
                     records.operations
                 )
-                if (unDiscaderUsers.length <= 2) {
+                if (unDiscardUsers.length <= 2) {
                     throw new Error('场上人数不少于2人时才可以看牌')
                 }
-                if (
-                    records.watchNumbers[res.user.user_id] &&
-                    records.watchNumbers[res.user.user_id] >= 1
-                ) {
+                if (records.watchNumbers[res.user.user_id] >= 1) {
                     throw new Error('每人每次发言只有一次私人看牌机会噢')
                 }
                 //因为是看过牌的才能看别人牌，所以*2
@@ -951,6 +995,10 @@ module.exports = {
                             followScore: roomInfo.getRoomRecords().followScore,
                             spokesman: roomInfo.getRoomRecords().spokesman,
                             innerScores: roomInfo.getRoomRecords().innerScores,
+                            stuffies: roomInfo.getRoomRecords().stuffies,
+                            opens: roomInfo.getRoomRecords().opens,
+                            watchNumbers:
+                                roomInfo.getRoomRecords().watchNumbers,
                             targetPokers: targetPokers,
                             targetUser: targetUser,
                             isSelf: connection === conn
@@ -1044,7 +1092,11 @@ module.exports = {
                                     roomInfo.getRoomRecords().followScore,
                                 spokesman: roomInfo.getRoomRecords().spokesman,
                                 innerScores:
-                                    roomInfo.getRoomRecords().innerScores
+                                    roomInfo.getRoomRecords().innerScores,
+                                stuffies: roomInfo.getRoomRecords().stuffies,
+                                opens: roomInfo.getRoomRecords().opens,
+                                watchNumbers:
+                                    roomInfo.getRoomRecords().watchNumbers
                             },
                             `${connection.user.user_nickname}离开了聊天室`
                         )
