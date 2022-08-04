@@ -89,9 +89,15 @@ const doCountScore = (res, connection, server) => {
         if ((isBao || isTHS) && records.stuffies[winUser] > 0) {
             //获取明牌和闷牌次数总和大于0的其他用户
             const otherUsers = Object.keys(records.pokers).filter(item => {
+                console.log(
+                    '其他玩家闷牌次数',
+                    records.stuffies[item],
+                    '上牌次数',
+                    records.opens[item]
+                )
                 return (
                     item != winUser &&
-                    records.opens[item] + records.stuffies[0] > 0
+                    records.opens[item] + records.stuffies[item] > 0
                 )
             })
             console.log('参与吃喜的用户', otherUsers)
