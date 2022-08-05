@@ -556,6 +556,19 @@ module.exports = {
         }
         return hasAllComplete
     },
+    //判断某个用户是否配好牌了
+    isCompleteForCurrentUser(pokers, userId, discardsUser) {
+        let flag = true
+        if (discardsUser != userId) {
+            const isUnComplete = pokers.some(item => {
+                return item.belong[0] == -1
+            })
+            if (isUnComplete) {
+                flag = false
+            }
+        }
+        return flag
+    },
     //获取没有丢牌的用户数组
     getUnDiscardUsers(users, operations) {
         return users.filter(item => {

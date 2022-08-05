@@ -403,8 +403,12 @@ module.exports = {
                     if (roomConnections.length <= 1) {
                         throw new Error('开始游戏必须不少于两个人')
                     }
+                    let roomInfo = roomUtil.getRoom(res.room)
+                    if (roomInfo) {
+                        throw new Error('游戏已经开始了')
+                    }
                     //从数据库中查询到房间信息
-                    let roomInfo = await RoomService.query(res.room)
+                    roomInfo = await RoomService.query(res.room)
                     //转为Room对象
                     roomInfo = roomUtil.initRoomObject(roomInfo)
                     //判断是否房主
@@ -631,6 +635,10 @@ module.exports = {
                     let roomInfo = roomUtil.getRoom(res.room)
                     //获取records
                     let records = roomInfo.getRoomRecords()
+                    //如果还没到你发言
+                    if (records.spokesman != res.user.user_id) {
+                        throw new Error('还没到你发言，请稍等')
+                    }
                     //不是没看牌的状态
                     if (records.operations[res.user.user_id] != 0) {
                         throw new Error('你已经看过牌或者丢牌了')
@@ -688,6 +696,10 @@ module.exports = {
                     let roomInfo = roomUtil.getRoom(res.room)
                     //获取records
                     let records = roomInfo.getRoomRecords()
+                    //如果还没到你发言
+                    if (records.spokesman != res.user.user_id) {
+                        throw new Error('还没到你发言，请稍等')
+                    }
                     //已丢牌状态
                     if (records.operations[res.user.user_id] == 2) {
                         throw new Error('你已丢牌，无须重复丢牌')
@@ -781,6 +793,10 @@ module.exports = {
                     let roomInfo = roomUtil.getRoom(res.room)
                     //获取records
                     let records = roomInfo.getRoomRecords()
+                    //如果还没到你发言
+                    if (records.spokesman != res.user.user_id) {
+                        throw new Error('还没到你发言，请稍等')
+                    }
                     //丢牌处理
                     if (records.operations[res.user.user_id] == 2) {
                         throw new Error('你已丢牌无法见面')

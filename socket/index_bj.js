@@ -448,8 +448,13 @@ module.exports = {
                     if (roomConnections.length <= 1) {
                         throw new Error('开始游戏必须不少于两个人')
                     }
+                    //先从缓存里查房间信息
+                    let roomInfo = roomUtil.getRoom(res.room)
+                    if (roomInfo) {
+                        throw new Error('游戏已经开始了')
+                    }
                     //从数据库中查询到房间信息
-                    let roomInfo = await RoomService.query(res.room)
+                    roomInfo = await RoomService.query(res.room)
                     //转为Room对象
                     roomInfo = roomUtil.initRoomObject(roomInfo)
                     if (roomInfo.room_creator != res.user.user_id) {
@@ -542,6 +547,15 @@ module.exports = {
                     }
                     //更新pokers
                     let pokers = records.pokers
+                    if (
+                        roomUtil.isCompleteForCurrentUser(
+                            pokers[res.user.user_id],
+                            res.user.user_id,
+                            records.discardsUser
+                        )
+                    ) {
+                        throw new Error('你已经配好牌了，请勿重复点击')
+                    }
                     pokers[res.user.user_id] = res.pokers[res.user.user_id]
                     records.pokers = pokers
                     for (let key in pokers) {
