@@ -13,8 +13,9 @@ const sqlUtil = new SqlUtil(pool, 'room')
 const UserService = require('./UserService')
 //创建业务类
 const service = {}
-//设置定时任务删除之前未完成的房间
-setInterval(async () => {
+
+//删除今日0点之前未完成的房间
+const deleteIntervalFn = async () => {
     try {
         //今日时间
         let today = new Date()
@@ -47,7 +48,12 @@ setInterval(async () => {
     } catch (error) {
         console.log('定时删除任务', error)
     }
-}, 3 * 24 * 60 * 60 * 1000)
+}
+deleteIntervalFn()
+//设置定时任务删除之前未完成的房间
+setInterval(async () => {
+    deleteIntervalFn()
+}, 7 * 24 * 60 * 60 * 1000)
 
 //查询对局
 service.queryRoom = async req => {
