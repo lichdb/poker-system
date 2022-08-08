@@ -4,11 +4,11 @@
  */
 const routes = [
     '/api/room/create',
-    '/api/user/modify',
-    '/api/room/check',
-    '/api/user/defaultLogin',
     '/api/room/queryHistory',
     '/api/room/queryRoom',
+    '/api/room/check',
+    '/api/user/modify',
+    '/api/user/defaultLogin',
     '/api/user/queryUserInfo'
 ]
 

@@ -8,7 +8,8 @@ class User {
         user_password,
         user_register,
         user_login,
-        user_nickname
+        user_nickname,
+        user_ban
     ) {
         //用户ID
         this.user_id = user_id
@@ -22,6 +23,8 @@ class User {
         this.user_login = user_login
         //用户昵称
         this.user_nickname = user_nickname
+        //用户是否禁止登录，0是1否
+        this.user_ban = user_ban
     }
 }
 

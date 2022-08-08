@@ -57,7 +57,15 @@ app.use((req, res, next) => {
                         jwtResult.user_id
                     )
                     if (user) {
-                        next()
+                        if (user.user_ban == 0) {
+                            next(
+                                new UnauthorizedError(
+                                    '抱歉，该账号已被禁止使用'
+                                )
+                            )
+                        } else {
+                            next()
+                        }
                     } else {
                         next(new UnauthorizedError('此用户已不存在'))
                     }

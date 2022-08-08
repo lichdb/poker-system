@@ -1,5 +1,6 @@
 //引入异常
 const ServiceError = require('../error/ServiceError')
+const UnauthorizedError = require('../error/UnauthorizedError')
 //引入md5
 const md5 = require('md5-node')
 //引入token工具
@@ -14,6 +15,7 @@ const pool = require('../pool.js')
 const SqlUtil = require('mysql-op')
 //创建mysql-op实例
 const sqlUtil = new SqlUtil(pool, 'user')
+const dictSqlUtil = new SqlUtil(pool, 'dict')
 //创建业务类
 const service = {}
 
@@ -42,7 +44,7 @@ service.defaultLogin = async req => {
     let user = await jwt.parseToken(token)
     const users = await sqlUtil.query('user_id', user.user_id)
     if (users.length == 0) {
-        throw new ServiceError('此用户已不存在')
+        throw new UnauthorizedError('此用户已不存在')
     }
     user = users[0]
     //更新登录时间
@@ -76,6 +78,10 @@ service.login = async req => {
     if (user.user_password != md5(user_password)) {
         throw new ServiceError('密码错误，请重新输入')
     }
+    //是否已被禁止登录
+    if (user.user_ban == 0) {
+        throw new ServiceError('抱歉，该账号已被禁止使用')
+    }
     //更新登录时间
     user.user_login = Date.now()
     await sqlUtil.update(user, 'user_id')
@@ -97,6 +103,16 @@ service.register = async req => {
     const user_name = req.body.user_name
     const user_password = req.body.user_password
     const user_nickname = req.body.user_nickname
+    let PROMISE_REGISTER = 0
+    //获取是否允许注册的字典值
+    const dict = await dictSqlUtil.query('dict_key', 'PROMISE_REGISTER')
+    if (dict.length > 0) {
+        PROMISE_REGISTER = Number(dict[0].dict_value) || 0
+    }
+    //如果是1则表示不允许新用户注册
+    if (PROMISE_REGISTER == 1) {
+        throw new ServiceError('抱歉，目前服务器负载过高，注册功能暂时关闭')
+    }
     if (!user_name || !user_password || !user_nickname) {
         throw new ServiceError('参数异常')
     }
@@ -123,7 +139,8 @@ service.register = async req => {
         md5(user_password),
         Date.now(),
         Date.now(),
-        user_nickname
+        user_nickname,
+        1
     )
     const result = await sqlUtil.insert(user)
     if (result.affectedRows == 0) {
