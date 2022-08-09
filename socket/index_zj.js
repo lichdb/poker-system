@@ -20,9 +20,9 @@ const HAPPY_SCORES = [5, 8]
  * followScore  记录跟牌分数，每一局会重置
  * spokesman    记录当前发言人ID，每一次发言人变换都会更新
  * innerScores  每一局的盘内总分，每一局会重置
- * watchNumbers 记录每一次讲话私下看牌的次数
- * opens    每个用户的明牌上分次数
- * stuffies    每个用户的闷牌上分次数
+ * watchNumbers 记录每一次讲话私下看牌的次数，每一局会重置
+ * opens    每个用户的明牌上分次数，每一局会重置
+ * stuffies    每个用户的闷牌上分次数，每一局会重置
  */
 
 //推送异常消息
@@ -110,7 +110,19 @@ const doCountScore = (res, connection, server) => {
                 records.scores[item] -= happyScore
             })
         }
-        console.log('每局结束得分', records.scores)
+        //将这局记录到历史中去
+        records.histories.push({
+            scores: JSON.parse(JSON.stringify(records.scores)),
+            operations: JSON.parse(JSON.stringify(records.operations)),
+            currentGame: records.currentGame,
+            pokers: JSON.parse(JSON.stringify(records.pokers)),
+            userInfos: JSON.parse(JSON.stringify(records.userInfos)),
+            followScore: records.followScore,
+            innerScores: records.innerScores,
+            watchNumbers: JSON.parse(JSON.stringify(records.watchNumbers)),
+            opens: JSON.parse(JSON.stringify(records.opens)),
+            stuffies: JSON.parse(JSON.stringify(records.stuffies))
+        })
         //判断是否结束
         if (records.currentGame == roomInfo.room_mode) {
             //更新records
@@ -451,6 +463,10 @@ module.exports = {
                     records.opens = opens
                     records.userInfos = users
                     records.watchNumbers = watchNumbers
+
+                    //历史记录，用来存放每局结束时的数据
+                    records.histories = []
+
                     //重新设置records
                     roomInfo.setRoomRecords(records)
                     //记录
