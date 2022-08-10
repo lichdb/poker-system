@@ -76,7 +76,6 @@ service.queryHistoryPage = async req => {
     const pageSize = Number(req.body.pageSize) || 10
     const pageCurrent = Number(req.body.pageCurrent) || 1
     const startIndex = (pageCurrent - 1) * pageSize
-    console.log(pageSize, pageCurrent, startIndex)
     let params = {
         'room.room_status': 2
     }
