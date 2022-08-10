@@ -19,10 +19,28 @@ const dictSqlUtil = new SqlUtil(pool, 'dict')
 //创建业务类
 const service = {}
 
+//校验管理员
+service.checkAdmin = async req => {
+    const admin_key = req.body.admin_key
+    if (util.hasUndefinedParam([admin_key])) {
+        throw new ServiceError('参数异常')
+    }
+    let ADMIN_KEY = ''
+    //获取ADMIN_KEY
+    const dict = await dictSqlUtil.query('dict_key', 'ADMIN_KEY')
+    if (dict.length > 0) {
+        ADMIN_KEY = dict[0].dict_value
+    }
+    if (md5(admin_key) != ADMIN_KEY) {
+        throw new ServiceError('管理员密钥错误')
+    }
+    return ADMIN_KEY
+}
+
 //根据ID查询用户基本信息
 service.queryUserInfo = async req => {
     const user_id = req.body.user_id
-    if (!user_id) {
+    if (util.hasUndefinedParam([user_id])) {
         throw new ServiceError('未获取到用户ID')
     }
     const users = await sqlUtil.query('user_id', user_id, [
@@ -67,7 +85,7 @@ service.defaultLogin = async req => {
 service.login = async req => {
     const user_name = req.body.user_name
     const user_password = req.body.user_password
-    if (!user_name || !user_password) {
+    if (util.hasUndefinedParam([user_name, user_password])) {
         throw new ServiceError('参数异常')
     }
     const users = await sqlUtil.query('user_name', user_name)
@@ -113,7 +131,7 @@ service.register = async req => {
     if (PROMISE_REGISTER == 1) {
         throw new ServiceError('抱歉，目前服务器负载过高，注册功能暂时关闭')
     }
-    if (!user_name || !user_password || !user_nickname) {
+    if (util.hasUndefinedParam([user_name, user_password, user_nickname])) {
         throw new ServiceError('参数异常')
     }
     if (user_nickname.length > 8) {
@@ -155,7 +173,7 @@ service.modify = async req => {
     const user_nickname = req.body.user_nickname
     const user_id = req.body.user_id
 
-    if (!user_id) {
+    if (util.hasUndefinedParam([user_id])) {
         throw new ServiceError('参数异常')
     }
 

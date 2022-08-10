@@ -9,6 +9,17 @@ const ServiceError = require('../error/ServiceError')
 //引入业务类
 const RoomService = require('../service/RoomService')
 
+//分页查询所有用户历史记录
+router.post('/queryHistoryPage', (req, res, next) => {
+    RoomService.queryHistoryPage(req)
+        .then(result => {
+            return res.json(JsonResult.success(result))
+        })
+        .catch(error => {
+            next(error)
+        })
+})
+
 //根据ID查询房间信息
 router.post('/queryRoom', (req, res, next) => {
     RoomService.queryRoom(req)

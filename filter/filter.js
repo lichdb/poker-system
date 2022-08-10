@@ -9,7 +9,8 @@ const routes = [
     '/api/room/check',
     '/api/user/modify',
     '/api/user/defaultLogin',
-    '/api/user/queryUserInfo'
+    '/api/user/queryUserInfo',
+    '/api/user/checkAdmin'
 ]
 
 module.exports = url => {

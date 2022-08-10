@@ -9,6 +9,17 @@ const ServiceError = require('../error/ServiceError')
 //引入业务类
 const UserService = require('../service/UserService')
 
+//管理员校验
+router.post('/checkAdmin', (req, res, next) => {
+    UserService.checkAdmin(req)
+        .then(result => {
+            return res.json(JsonResult.success(result))
+        })
+        .catch(error => {
+            next(error)
+        })
+})
+
 //静默登录
 router.post('/defaultLogin', (req, res, next) => {
     UserService.defaultLogin(req)
