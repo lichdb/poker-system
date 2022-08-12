@@ -90,6 +90,8 @@ const doCountScore = (res, connection, server) => {
             //获取明牌和闷牌次数总和大于0的其他用户
             const otherUsers = Object.keys(records.pokers).filter(item => {
                 console.log(
+                    '玩家ID',
+                    item,
                     '其他玩家闷牌次数',
                     records.stuffies[item],
                     '上牌次数',
