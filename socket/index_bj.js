@@ -846,7 +846,7 @@ module.exports = {
                             {
                                 users: users
                             },
-                            `${connection.user.user_nickname}离开了聊天室`
+                            `${connection?.user?.user_nickname}离开了聊天室`
                         )
                         conn.send(JSON.stringify(msg))
                     }
