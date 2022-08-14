@@ -781,6 +781,9 @@ module.exports = {
     //连接关闭
     async close(code, connection, server) {
         try {
+            if (!connection.user) {
+                return
+            }
             //获取该房间的所有连接
             const roomConnections = server.connections.filter(item => {
                 return item.room == connection.room
