@@ -23,6 +23,7 @@ const HAPPY_SCORES = [5, 8]
  * watchNumbers 记录每一次讲话私下看牌的次数，每一局会重置
  * opens    每个用户的明牌上分次数，每一局会重置
  * stuffies    每个用户的闷牌上分次数，每一局会重置
+ * throwCounts 丢球次数 每一局会重置
  */
 
 //推送异常消息
@@ -148,18 +149,21 @@ const doCountScore = (res, connection, server) => {
             let opens = {}
             let watchNumbers = {}
             let scores = records.scores
+            let throwCounts = {}
             records.userInfos.forEach(item => {
                 scores[item.user_id] -= BOTTOM_SCORE
                 operations[item.user_id] = 0
                 stuffies[item.user_id] = 0
                 opens[item.user_id] = 0
                 watchNumbers[item.user_id] = 0
+                throwCounts[item.user_id] = 0
             })
             records.scores = scores
             records.operations = operations
             records.opens = opens
             records.stuffies = stuffies
             records.watchNumbers = watchNumbers
+            records.throwCounts = throwCounts
             // 重新设置records
             roomInfo.setRoomRecords(records)
             //记录
@@ -186,7 +190,8 @@ const doCountScore = (res, connection, server) => {
                         innerScores: roomInfo.getRoomRecords().innerScores,
                         stuffies: roomInfo.getRoomRecords().stuffies,
                         opens: roomInfo.getRoomRecords().opens,
-                        watchNumbers: roomInfo.getRoomRecords().watchNumbers
+                        watchNumbers: roomInfo.getRoomRecords().watchNumbers,
+                        throwCounts: roomInfo.getRoomRecords().throwCounts
                     },
                     `第${roomInfo.getRoomRecords().currentGame}局开始`
                 )
@@ -296,6 +301,8 @@ module.exports = {
                         let opens = records.opens
                         //获取私人看牌次数
                         let watchNumbers = records.watchNumbers
+                        //获取丢球次数
+                        let throwCounts = records.throwCounts
                         console.log(
                             '用户加入房间',
                             res.user.user_id,
@@ -323,6 +330,10 @@ module.exports = {
                         if (!watchNumbers[res.user.user_id]) {
                             watchNumbers[res.user.user_id] = 0
                         }
+                        //没有丢球次数则重置
+                        if (!throwCounts[res.user.user_id]) {
+                            throwCounts[res.user.user_id] = 0
+                        }
                         //判断是否已经缓存过此用户信息
                         const hasUser = userInfos.some(item => {
                             return item.user_id == res.user.user_id
@@ -339,6 +350,7 @@ module.exports = {
                         records.stuffies = stuffies
                         records.opens = opens
                         records.watchNumbers = watchNumbers
+                        records.throwCounts = throwCounts
                         //重新设置records
                         roomInfo.setRoomRecords(records)
                         //更新room
@@ -371,7 +383,9 @@ module.exports = {
                                         roomInfo?.getRoomRecords().watchNumbers,
                                     opens: roomInfo?.getRoomRecords().opens,
                                     stuffies:
-                                        roomInfo?.getRoomRecords().stuffies
+                                        roomInfo?.getRoomRecords().stuffies,
+                                    throwCounts:
+                                        roomInfo?.getRoomRecords().throwCounts
                                 },
                                 `你已加入房间`
                             )
@@ -396,7 +410,9 @@ module.exports = {
                                     spokesman:
                                         roomInfo?.getRoomRecords().spokesman,
                                     innerScores:
-                                        roomInfo?.getRoomRecords().innerScores
+                                        roomInfo?.getRoomRecords().innerScores,
+                                    throwCounts:
+                                        roomInfo?.getRoomRecords().throwCounts
                                 },
                                 `${res.user.user_nickname}加入房间`
                             )
@@ -451,12 +467,14 @@ module.exports = {
                     let stuffies = {}
                     let opens = {}
                     let watchNumbers = {}
+                    let throwCounts = {}
                     users.forEach(item => {
                         scores[item.user_id] = -BOTTOM_SCORE
                         operations[item.user_id] = 0 //0表示没看牌，1表示看牌了，2表示弃牌
                         stuffies[item.user_id] = 0
                         opens[item.user_id] = 0
                         watchNumbers[item.user_id] = 0
+                        throwCounts[item.user_id] = 0
                     })
                     //记录到records
                     records.scores = scores
@@ -465,6 +483,7 @@ module.exports = {
                     records.opens = opens
                     records.userInfos = users
                     records.watchNumbers = watchNumbers
+                    records.throwCounts = throwCounts
 
                     //历史记录，用来存放每局结束时的数据
                     records.histories = []
@@ -500,7 +519,9 @@ module.exports = {
                                 watchNumbers:
                                     roomInfo.getRoomRecords().watchNumbers,
                                 opens: roomInfo.getRoomRecords().opens,
-                                stuffies: roomInfo.getRoomRecords().stuffies
+                                stuffies: roomInfo.getRoomRecords().stuffies,
+                                throwCounts:
+                                    roomInfo.getRoomRecords().throwCounts
                             },
                             '游戏开始，推送数据'
                         )
@@ -968,6 +989,17 @@ module.exports = {
                 const users = roomConnections.map(item => {
                     return item.user
                 })
+                let roomInfo = roomUtil.getRoom(res.room)
+                let records = roomInfo.getRoomRecords()
+                if (records.throwCounts[res.user.user_id] >= 20) {
+                    throw new Error('丢球丢多了容易累，歇会哈')
+                }
+                //更新丢球数
+                records.throwCounts[res.user.user_id]++
+                //设置roomRecords
+                roomInfo.setRoomRecords(records)
+                //记录
+                roomUtil.updateRoom(res.room, roomInfo)
                 //推送丢球通知
                 roomConnections.forEach(conn => {
                     const msg = new Message(
@@ -977,7 +1009,8 @@ module.exports = {
                         {
                             users: users,
                             targetUser: targetUser,
-                            selfUser: res.user
+                            selfUser: res.user,
+                            throwCounts: roomInfo.getRoomRecords().throwCounts
                         },
                         `${res.user.user_nickname}向${targetUser.user_nickname}丢球`
                     )

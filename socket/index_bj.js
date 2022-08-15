@@ -20,6 +20,7 @@ const HAPPY_SCORES = {
  * userInfos    记录参与对局的用户信息，不会随着用户退出而变化
  * passData     纪录每一局用户赢的次数，每一局会重置
  * discardsUser     每一局弃牌用户，每一局会重置
+ * throwCounts  丢球数，每一局会重置
  */
 
 //推送异常消息
@@ -234,9 +235,10 @@ const goNextGame = (res, connection, server) => {
             //记录当前局数
             records.currentGame = records.currentGame + 1
             console.log('即将进入第' + records.currentGame + '局')
-            //初始化每个用户的passData
+            //初始化每个用户的passData和throwCounts
             for (let key in records.scores) {
                 records.passData[key] = 0
+                records.throwCounts[key] = 0
             }
             //重新设置discardsUser
             records.discardsUser = null
@@ -259,7 +261,8 @@ const goNextGame = (res, connection, server) => {
                         pokers: roomInfo.getRoomRecords().pokers,
                         currentGame: roomInfo.getRoomRecords().currentGame,
                         scores: roomInfo.getRoomRecords().scores,
-                        discardsUser: roomInfo.getRoomRecords().discardsUser
+                        discardsUser: roomInfo.getRoomRecords().discardsUser,
+                        throwCounts: roomInfo.getRoomRecords().throwCounts
                     },
                     `第${roomInfo.getRoomRecords().currentGame}局开始`
                 )
@@ -359,6 +362,7 @@ module.exports = {
                         let scores = records.scores
                         let passData = records.passData
                         let userInfos = records.userInfos
+                        let throwCounts = records.throwCounts
                         console.log(
                             '用户加入房间',
                             res.user.user_id,
@@ -374,6 +378,10 @@ module.exports = {
                         if (!passData[res.user.user_id]) {
                             passData[res.user.user_id] = 0
                         }
+                        //throwCounts不存在则重置
+                        if (!throwCounts[res.user.user_id]) {
+                            throwCounts[res.user.user_id] = 0
+                        }
                         //判断是否已经缓存过此用户信息
                         const hasUser = userInfos.some(item => {
                             return item.user_id == res.user.user_id
@@ -387,6 +395,7 @@ module.exports = {
                         records.scores = scores
                         records.passData = passData
                         records.userInfos = userInfos
+                        records.throwCounts = throwCounts
                         //重新设置records
                         roomInfo.setRoomRecords(records)
                         //更新room
@@ -409,7 +418,9 @@ module.exports = {
                                             ?.discardsUser,
                                     isSelf: true,
                                     userInfos:
-                                        roomInfo?.getRoomRecords()?.userInfos
+                                        roomInfo?.getRoomRecords()?.userInfos,
+                                    throwCounts:
+                                        roomInfo?.getRoomRecords()?.throwCounts
                                 },
                                 `你已加入房间`
                             )
@@ -430,7 +441,9 @@ module.exports = {
                                             ?.discardsUser,
                                     isSelf: false,
                                     userInfos:
-                                        roomInfo?.getRoomRecords()?.userInfos
+                                        roomInfo?.getRoomRecords()?.userInfos,
+                                    throwCounts:
+                                        roomInfo?.getRoomRecords()?.throwCounts
                                 },
                                 `${res.user.user_nickname}加入房间`
                             )
@@ -474,15 +487,18 @@ module.exports = {
                     records.currentGame = 1
                     //初始化弃牌用户
                     records.discardsUser = null
-                    //初始化每个用户的积分和单局赢的次数
+                    //初始化每个用户的积分和单局赢、丢球数的次数
                     let scores = {}
                     let passData = {}
+                    let throwCounts = {}
                     users.forEach(item => {
                         scores[item.user_id] = 0
                         passData[item.user_id] = 0
+                        throwCounts[item.user_id] = 0
                     })
                     records.scores = scores
                     records.passData = passData
+                    records.throwCounts = throwCounts
                     //记录当前的用户信息
                     records.userInfos = users
 
@@ -511,7 +527,9 @@ module.exports = {
                                 scores: roomInfo.getRoomRecords().scores,
                                 discardsUser:
                                     roomInfo.getRoomRecords().discardsUser,
-                                userInfos: roomInfo.getRoomRecords().userInfos
+                                userInfos: roomInfo.getRoomRecords().userInfos,
+                                throwCounts:
+                                    roomInfo.getRoomRecords().throwCounts
                             },
                             '游戏开始，推送数据'
                         )
@@ -685,6 +703,17 @@ module.exports = {
                 const users = roomConnections.map(item => {
                     return item.user
                 })
+                let roomInfo = roomUtil.getRoom(res.room)
+                let records = roomInfo.getRoomRecords()
+                if (records.throwCounts[res.user.user_id] >= 20) {
+                    throw new Error('丢球丢多了容易累，歇会哈')
+                }
+                //更新丢球数
+                records.throwCounts[res.user.user_id]++
+                //设置roomRecords
+                roomInfo.setRoomRecords(records)
+                //记录
+                roomUtil.updateRoom(res.room, roomInfo)
                 //推送丢球通知
                 roomConnections.forEach(conn => {
                     const msg = new Message(
@@ -694,7 +723,8 @@ module.exports = {
                         {
                             users: users,
                             targetUser: targetUser,
-                            selfUser: res.user
+                            selfUser: res.user,
+                            throwCounts: roomInfo.getRoomRecords().throwCounts
                         },
                         `${res.user.user_nickname}向${targetUser.user_nickname}丢球`
                     )
