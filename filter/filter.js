@@ -7,6 +7,7 @@ const routes = [
     '/api/room/queryHistory',
     '/api/room/queryRoom',
     '/api/room/check',
+    '/api/room/visitorQuery',
     '/api/user/modify',
     '/api/user/defaultLogin',
     '/api/user/queryUserInfo',

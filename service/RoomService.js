@@ -13,6 +13,8 @@ const sqlUtil = new SqlUtil(pool, 'room')
 const dictSqlUtil = new SqlUtil(pool, 'dict')
 //引入用户业务
 const UserService = require('./UserService')
+//引入房间工具类
+const roomUtil = require('../socket/roomUtil')
 //创建业务类
 const service = {}
 
@@ -260,6 +262,22 @@ service.update = async roomInfo => {
     const result = sqlUtil.update(roomInfo, 'room_id')
     if (result.affectedRows == 0) {
         throw new ServiceError('更新失败')
+    }
+}
+
+//搜索对局房间信息
+service.visitorQuery = async req => {
+    const room_id = req.body.room_id
+    if (util.hasUndefinedParam[room_id]) {
+        throw new ServiceError('参数异常')
+    }
+    const room = roomUtil.getRoom(room_id)
+    if (!room) {
+        throw new ServiceError('对局不存在')
+    }
+    return {
+        records: room.getRoomRecords(),
+        roomType: room.room_type
     }
 }
 

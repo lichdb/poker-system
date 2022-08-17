@@ -64,4 +64,15 @@ router.post('/check', (req, res, next) => {
         })
 })
 
+//查询对局中的房间详情
+router.post('/visitorQuery', (req, res, next) => {
+    RoomService.visitorQuery(req)
+        .then(result => {
+            return res.json(JsonResult.success(result))
+        })
+        .catch(error => {
+            next(error)
+        })
+})
+
 module.exports = router
