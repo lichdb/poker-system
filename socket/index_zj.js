@@ -1118,100 +1118,106 @@ module.exports = {
             if (!connection.user) {
                 return
             }
-            //获取该房间的所有连接
-            const roomConnections = server.connections.filter(item => {
-                return item.room == connection.room
-            })
-            //获取用户数组
-            const users = roomConnections.map(item => {
-                return item.user
-            })
-            //获取房间信息
-            const roomInfo = roomUtil.getRoom(connection.room)
-            if (roomInfo) {
-                //如果房间在游戏中
-                if (roomInfo.room_status == 1) {
-                    //获取records
-                    let records = roomInfo.getRoomRecords()
-                    console.log(
-                        '房间对局中，用户离开房间',
-                        connection.user.user_id,
-                        records.pokers[connection.user.user_id]
-                    )
-                    //如果还没有给这个用户发牌，则删除他的初始化信息
-                    if (!records.pokers[connection.user.user_id]) {
-                        let scores = records.scores
-                        let userInfos = records.userInfos
-                        let operations = records.operations
-                        let stuffies = records.stuffies
-                        let opens = records.opens
-                        let watchNumbers = records.watchNumbers
-                        delete scores[connection.user.user_id]
-                        delete operations[connection.user.user_id]
-                        delete stuffies[connection.user.user_id]
-                        delete opens[connection.user.user_id]
-                        delete watchNumbers[connection.user.user_id]
-                        userInfos = userInfos.filter(item => {
-                            return item.user_id != connection.user.user_id
-                        })
-                        records.scores = scores
-                        records.userInfos = userInfos
-                        records.operations = operations
-                        records.stuffies = stuffies
-                        records.opens = opens
-                        records.watchNumbers = watchNumbers
-                        //重新设置records
-                        roomInfo.setRoomRecords(records)
-                        //更新room
-                        roomUtil.updateRoom(connection.room, roomInfo)
+            const fn = async () => {
+                //获取该房间的所有连接
+                const roomConnections = server.connections.filter(item => {
+                    return item.room == connection.room
+                })
+                //获取用户数组
+                const users = roomConnections.map(item => {
+                    return item.user
+                })
+                //获取房间信息
+                const roomInfo = roomUtil.getRoom(connection.room)
+                if (roomInfo) {
+                    //如果房间在游戏中
+                    if (roomInfo.room_status == 1) {
+                        //获取records
+                        let records = roomInfo.getRoomRecords()
+                        console.log(
+                            '房间对局中，用户离开房间',
+                            connection.user.user_id,
+                            records.pokers[connection.user.user_id]
+                        )
+                        //如果还没有给这个用户发牌，则删除他的初始化信息
+                        if (!records.pokers[connection.user.user_id]) {
+                            let scores = records.scores
+                            let userInfos = records.userInfos
+                            let operations = records.operations
+                            let stuffies = records.stuffies
+                            let opens = records.opens
+                            let watchNumbers = records.watchNumbers
+                            delete scores[connection.user.user_id]
+                            delete operations[connection.user.user_id]
+                            delete stuffies[connection.user.user_id]
+                            delete opens[connection.user.user_id]
+                            delete watchNumbers[connection.user.user_id]
+                            userInfos = userInfos.filter(item => {
+                                return item.user_id != connection.user.user_id
+                            })
+                            records.scores = scores
+                            records.userInfos = userInfos
+                            records.operations = operations
+                            records.stuffies = stuffies
+                            records.opens = opens
+                            records.watchNumbers = watchNumbers
+                            //重新设置records
+                            roomInfo.setRoomRecords(records)
+                            //更新room
+                            roomUtil.updateRoom(connection.room, roomInfo)
+                        }
                     }
+                    roomConnections.forEach(conn => {
+                        if (conn != connection) {
+                            const msg = new Message(
+                                2,
+                                conn.room,
+                                conn.user,
+                                {
+                                    users: users,
+                                    pokers: roomInfo.getRoomRecords().pokers,
+                                    currentGame:
+                                        roomInfo.getRoomRecords().currentGame,
+                                    scores: roomInfo.getRoomRecords().scores,
+                                    userInfos:
+                                        roomInfo.getRoomRecords().userInfos,
+                                    operations:
+                                        roomInfo.getRoomRecords().operations,
+                                    followScore:
+                                        roomInfo.getRoomRecords().followScore,
+                                    spokesman:
+                                        roomInfo.getRoomRecords().spokesman,
+                                    innerScores:
+                                        roomInfo.getRoomRecords().innerScores,
+                                    stuffies:
+                                        roomInfo.getRoomRecords().stuffies,
+                                    opens: roomInfo.getRoomRecords().opens,
+                                    watchNumbers:
+                                        roomInfo.getRoomRecords().watchNumbers
+                                },
+                                `${connection.user.user_nickname}离开了聊天室`
+                            )
+                            conn.send(JSON.stringify(msg))
+                        }
+                    })
+                } else {
+                    roomConnections.forEach(conn => {
+                        if (conn != connection) {
+                            const msg = new Message(
+                                2,
+                                conn.room,
+                                conn.user,
+                                {
+                                    users: users
+                                },
+                                `${connection.user.user_nickname}离开了聊天室`
+                            )
+                            conn.send(JSON.stringify(msg))
+                        }
+                    })
                 }
-                roomConnections.forEach(conn => {
-                    if (conn != connection) {
-                        const msg = new Message(
-                            2,
-                            conn.room,
-                            conn.user,
-                            {
-                                users: users,
-                                pokers: roomInfo.getRoomRecords().pokers,
-                                currentGame:
-                                    roomInfo.getRoomRecords().currentGame,
-                                scores: roomInfo.getRoomRecords().scores,
-                                userInfos: roomInfo.getRoomRecords().userInfos,
-                                operations:
-                                    roomInfo.getRoomRecords().operations,
-                                followScore:
-                                    roomInfo.getRoomRecords().followScore,
-                                spokesman: roomInfo.getRoomRecords().spokesman,
-                                innerScores:
-                                    roomInfo.getRoomRecords().innerScores,
-                                stuffies: roomInfo.getRoomRecords().stuffies,
-                                opens: roomInfo.getRoomRecords().opens,
-                                watchNumbers:
-                                    roomInfo.getRoomRecords().watchNumbers
-                            },
-                            `${connection.user.user_nickname}离开了聊天室`
-                        )
-                        conn.send(JSON.stringify(msg))
-                    }
-                })
-            } else {
-                roomConnections.forEach(conn => {
-                    if (conn != connection) {
-                        const msg = new Message(
-                            2,
-                            conn.room,
-                            conn.user,
-                            {
-                                users: users
-                            },
-                            `${connection.user.user_nickname}离开了聊天室`
-                        )
-                        conn.send(JSON.stringify(msg))
-                    }
-                })
             }
+            await lockQueue(connection.room, fn)
         } catch (error) {
             console.log(error)
             //如果是ServiceError则需要告知前端刷新页面
