@@ -181,6 +181,10 @@ const goNextGame = (res, connection, server) => {
         })
         //获取records
         let records = roomInfo.getRoomRecords()
+
+        //更新去重userInfos，防止重复
+        records.userInfos = roomUtil.updateUserInfos(records.userInfos)
+
         console.log('当前比试完成时是第' + records.currentGame + '局')
         //遍历pokers执行吃喜加分减分逻辑
         for (let key in records.pokers) {
@@ -389,15 +393,11 @@ module.exports = {
                         if (!throwCounts[res.user.user_id]) {
                             throwCounts[res.user.user_id] = 0
                         }
-                        //判断是否已经缓存过此用户信息
-                        const hasUser = userInfos.some(item => {
-                            return item.user_id == res.user.user_id
-                        })
-                        console.log('是否缓存过用户信息了', hasUser)
-                        //如果没有缓存过则加入
-                        if (!hasUser) {
-                            userInfos = [...userInfos, res.user]
-                        }
+                        //更新userInfos
+                        userInfos = roomUtil.updateUserInfos([
+                            ...userInfos,
+                            res.user
+                        ])
                         //更新到records
                         records.scores = scores
                         records.passData = passData
@@ -511,7 +511,7 @@ module.exports = {
                     records.passData = passData
                     records.throwCounts = throwCounts
                     //记录当前的用户信息
-                    records.userInfos = users
+                    records.userInfos = roomUtil.updateUserInfos(users)
 
                     //历史记录，用来存放每局结束时的数据
                     records.histories = []

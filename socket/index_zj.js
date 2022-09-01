@@ -79,6 +79,10 @@ const doCountScore = (res, connection, server) => {
         }
         //赢者加分
         records.scores[winUser] += records.innerScores
+
+        //更新去重userInfos，防止重复
+        records.userInfos = roomUtil.updateUserInfos(records.userInfos)
+
         //如果赢者是豹子或者同花顺
         const isBao = roomUtil.isBao(records.pokers[winUser])
         const isTHS =
@@ -334,15 +338,11 @@ module.exports = {
                         if (!throwCounts[res.user.user_id]) {
                             throwCounts[res.user.user_id] = 0
                         }
-                        //判断是否已经缓存过此用户信息
-                        const hasUser = userInfos.some(item => {
-                            return item.user_id == res.user.user_id
-                        })
-                        console.log('是否缓存过用户信息了', hasUser)
-                        //如果没有缓存过则加入
-                        if (!hasUser) {
-                            userInfos = [...userInfos, res.user]
-                        }
+                        //更新userInfos
+                        userInfos = roomUtil.updateUserInfos([
+                            ...userInfos,
+                            res.user
+                        ])
                         //更新到records
                         records.scores = scores
                         records.userInfos = userInfos
@@ -481,7 +481,7 @@ module.exports = {
                     records.operations = operations
                     records.stuffies = stuffies
                     records.opens = opens
-                    records.userInfos = users
+                    records.userInfos = roomUtil.updateUserInfos(users)
                     records.watchNumbers = watchNumbers
                     records.throwCounts = throwCounts
 

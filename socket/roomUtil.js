@@ -592,5 +592,18 @@ module.exports = {
             )
         }
         return users[newSpokesIndex]
+    },
+    //去重userInfos
+    updateUserInfos(userInfos) {
+        let data = []
+        userInfos.forEach(item => {
+            let flag = data.some(el => {
+                return el.user_id == item.user_id
+            })
+            if (!flag) {
+                data.push(item)
+            }
+        })
+        return data
     }
 }
