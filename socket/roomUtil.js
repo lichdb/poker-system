@@ -403,7 +403,12 @@ module.exports = {
                 const pB2 = this.getNotPairePoker(pokersB)
                 //同样的对子
                 if (pA.value == pB.value) {
-                    //比较非对子值
+                    //单支牌也一样
+                    if (pA2.value == pB2.value) {
+                        //比较对子的点数
+                        return pA.points > pB.points
+                    }
+                    //单支牌不一样，则直接比较单子牌的点数
                     return pA2.points > pB2.points
                 }
                 return pA.points > pB.points
