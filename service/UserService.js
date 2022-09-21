@@ -189,7 +189,7 @@ service.modify = async req => {
             throw new ServiceError('昵称参数异常')
         }
         const users2 = await sqlUtil.query('user_nickname', user_nickname)
-        if (users2.length) {
+        if (users2.length && users2[0].user_id != user.user_id) {
             throw new ServiceError('该昵称已被别人使用了')
         }
         user.user_nickname = user_nickname
