@@ -1050,7 +1050,14 @@ module.exports = {
                     throw new Error('场上人数不少于2人时才可以看牌')
                 }
                 if (records.watchNumbers[res.user.user_id] >= 1) {
-                    throw new Error('每人每次发言只有一次私人看牌机会噢')
+                    throw new Error('每人每次发言只有一次私下看牌机会噢')
+                }
+                //是否有人还在闷牌
+                const hasNoWatch = Object.keys(records.operations).some(key => {
+                    return records.operations[key] == 0
+                })
+                if (hasNoWatch) {
+                    throw new Error('只有场上所有人都看牌过才允许私下看牌')
                 }
                 //因为是看过牌的才能看别人牌，所以*2
                 let upScore = records.followScore * 2
