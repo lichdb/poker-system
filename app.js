@@ -43,6 +43,9 @@ app.use(
         extended: true
     })
 )
+
+app.use(express.static('./static'))
+
 //请求访问拦截
 app.use((req, res, next) => {
     let url = req.originalUrl //获取浏览器中当前访问的nodejs路由地址
