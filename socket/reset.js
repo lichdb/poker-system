@@ -37,6 +37,13 @@ module.exports = {
                 obj[USER_ID] = obj[USER_ID].sort((a, b) => {
                     return a.points - b.points
                 })
+
+                let newSameFlowerNumber = this.getSameFlowerNumber(obj[USER_ID])
+                let newBaoNumber = this.getBaoNumber(obj[USER_ID])
+                //只有一个同花，并且没有豹子
+                if (newSameFlowerNumber == 1 && newBaoNumber == 0) {
+                    obj = this.main(obj)
+                }
             }
         }
         return obj
