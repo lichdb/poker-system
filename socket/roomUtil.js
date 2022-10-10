@@ -1,5 +1,6 @@
 const rooms = {}
 const pokersConfig = require('./pokersConfig')
+const reset = require('./reset')
 const Room = require('../entity/Room')
 const UserService = require('../service/UserService')
 
@@ -42,6 +43,7 @@ module.exports = {
                 return a.points - b.points
             })
         })
+        obj = reset.main(obj)
         console.log('最后发的牌', obj)
         const records = room.getRoomRecords()
         records.pokers = obj
