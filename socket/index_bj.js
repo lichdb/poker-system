@@ -169,7 +169,7 @@ const doComparePokers = (res, connection, server, group) => {
 //下一局
 const goNextGame = (res, connection, server) => {
     //3s后进入下一局
-    setTimeout(() => {
+    setTimeout(async () => {
         let roomInfo = roomUtil.getRoom(res.room)
         //获取该房间的所有连接
         const roomConnections = server.connections.filter(item => {
@@ -257,7 +257,7 @@ const goNextGame = (res, connection, server) => {
             //记录
             roomUtil.updateRoom(res.room, roomInfo)
             //发牌
-            roomUtil.licensingBJ(res.room, Object.keys(records.scores))
+            await roomUtil.licensingBJ(res.room, Object.keys(records.scores))
             //获取房间
             roomInfo = roomUtil.getRoom(res.room)
             //推送
@@ -521,7 +521,7 @@ module.exports = {
                     //记录
                     roomUtil.updateRoom(res.room, roomInfo)
                     //发牌
-                    roomUtil.licensingBJ(res.room, Object.keys(scores))
+                    await roomUtil.licensingBJ(res.room, Object.keys(scores))
                     //重新获取
                     roomInfo = roomUtil.getRoom(res.room)
                     //推送

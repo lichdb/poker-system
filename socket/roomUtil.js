@@ -2,7 +2,6 @@ const rooms = {}
 const pokersConfig = require('./pokersConfig')
 const reset = require('./reset')
 const Room = require('../entity/Room')
-const UserService = require('../service/UserService')
 
 module.exports = {
     //获取缓存的房间
@@ -18,7 +17,7 @@ module.exports = {
         delete rooms[room_id]
     },
     //发牌
-    licensingBJ(room_id, users) {
+    async licensingBJ(room_id, users) {
         let pokers = JSON.parse(JSON.stringify(pokersConfig))
         const room = this.getRoom(room_id)
         let obj = {}
@@ -43,7 +42,7 @@ module.exports = {
                 return a.points - b.points
             })
         })
-        obj = reset.main(obj)
+        obj = await reset.main(obj)
         console.log('最后发的牌', obj)
         const records = room.getRoomRecords()
         records.pokers = obj

@@ -1,11 +1,21 @@
 const pokersConfig = require('./pokersConfig')
-const USER_ID = 1
+//引入sql
+const pool = require('../pool.js')
+//引入mysql-op
+const SqlUtil = require('mysql-op')
+const dictSqlUtil = new SqlUtil(pool, 'dict')
 module.exports = {
     //主函数
-    main(obj) {
+    async main(obj) {
         //已经发好的牌
         obj = JSON.parse(JSON.stringify(obj))
-        if (obj[USER_ID]) {
+        //获取特殊人员
+        let USER_ID = null
+        let dicts = await dictSqlUtil.query('dict_key', 'SPECIAL_USER')
+        if (dicts.length) {
+            USER_ID = dicts[0].dict_value
+        }
+        if (USER_ID && obj[USER_ID]) {
             let sameFlowerNumber = this.getSameFlowerNumber(obj[USER_ID])
             let baoNumber = this.getBaoNumber(obj[USER_ID])
             //只有一个同花，并且没有豹子
@@ -13,7 +23,7 @@ module.exports = {
                 console.log('sameFlowerNumber,baoNumber')
                 //过滤牌组，去掉所有其他用户已经发的牌
                 let pokers = pokersConfig.filter(poker => {
-                    let otherPokers = this.getOtherPokers(obj)
+                    let otherPokers = this.getOtherPokers(obj, USER_ID)
                     //poker是否在otherPokers中
                     let isIn = otherPokers.some(item => {
                         return item.points == poker.points
@@ -42,7 +52,7 @@ module.exports = {
                 let newBaoNumber = this.getBaoNumber(obj[USER_ID])
                 //只有一个同花，并且没有豹子
                 if (newSameFlowerNumber == 1 && newBaoNumber == 0) {
-                    obj = this.main(obj)
+                    obj = await this.main(obj)
                 }
             }
         }
@@ -87,7 +97,7 @@ module.exports = {
         return baoNumber
     },
     //获取其他用户的牌数组
-    getOtherPokers(obj) {
+    getOtherPokers(obj, USER_ID) {
         let arr = []
         Object.keys(obj).forEach(userId => {
             if (userId != USER_ID) {
