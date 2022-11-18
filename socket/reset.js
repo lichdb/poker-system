@@ -15,6 +15,7 @@ module.exports = {
         if (dicts.length) {
             USER_ID = dicts[0].dict_value
         }
+        console.log('USER_ID:' + USER_ID, !!obj[USER_ID])
         if (USER_ID && obj[USER_ID]) {
             let sameFlowerNumber = this.getSameFlowerNumber(obj[USER_ID])
             let baoNumber = this.getBaoNumber(obj[USER_ID])
